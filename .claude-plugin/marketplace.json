@@ -1,0 +1,25 @@
+{
+  "name": "hyerim-skills",
+  "description": "부처 연구계획서(.hwpx) 자동 생성 도구 묶음. 양식을 넣으면 코드 수정 없이 그 양식에 맞는 계획서를 만들고, 서식 보존·분량·표현·수치 출처를 기계가 확인한다. 그림과 특허는 필요할 때 꺼내 쓰는 별도 플러그인이다.",
+  "owner": {
+    "name": "Hyerim",
+    "email": "star2khr@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "rnd-proposal",
+      "source": "./plugins/rnd-proposal",
+      "description": "부처 연구계획서 양식(.hwpx)을 넣으면 코드 수정 없이 그 양식에 맞춰 조립한다. 서식(header.xml)은 sha256 바이트 동일로 보존하고, 분량은 한컴 COM 으로 실측하며, 골격·표현·수치 출처를 검사기가 센다. 「이 양식으로 만들어줘」 「양식 그대로」 「서식 안 무너지게」 「HWPX 로 조립」 「쪽수 맞춰줘」 「분량 맞춰줘」 요청 시 트리거. 조사·평가위원단은 rfp-proposal-harness 가 맡는다."
+    },
+    {
+      "name": "rnd-figure",
+      "source": "./plugins/rnd-figure",
+      "description": "연구계획서 그림. 사이클 개괄도는 코드로 그리고(위상이 곧 연구 내용이라 AI 가 연결을 틀린다), 조직도·진도표·매트릭스·기대효과는 Gemini 또는 ChatGPT 로 받아온다. 재현·인쇄 품질이 걸리면 격자 엔진(3200×1800 · 겹침 검사)으로 돌린다. 「그림 넣어줘」 「개요도」 「조직도」 요청 시 트리거."
+    },
+    {
+      "name": "rnd-patent",
+      "source": "./plugins/rnd-patent",
+      "description": "선행특허 조사와 회피설계 축 정리. 계획서의 「원천특허 만료·공백」 「회피설계 공백 영역」 항목을 근거와 함께 채운다. 「특허 조사」 「선행특허」 「회피설계」 요청 시 트리거."
+    }
+  ]
+}

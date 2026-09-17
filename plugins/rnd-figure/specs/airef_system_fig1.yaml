@@ -1,0 +1,30 @@
+# AI 물질발굴 기반 친환경 냉매 히트펌프 시스템 개요도
+#
+# 사이클 그림이므로 개괄도 엔진(경로 A)으로 그린다 — 위상이 곧 연구 내용이다.
+# 시각 문법: 수치·상태점 번호·그룹박스·범례를 넣지 않는다.
+#
+# 구성
+#   신규 냉매 루프(검정 실선) : 압축기 → 응축기 → 팽창밸브 → 증발기 → 압축기
+#   저온 열원(빨간 점선)      : 증발기로 들어온다
+#   고온 열공급(파란 점선)    : 응축기에서 나간다
+preset: turbo
+canvas: hero
+grid: [1, 1]
+dpi: 200
+
+panels:
+  - components:
+      - {id: mot,  type: motor,      at: [0.05, 0.46], r: 0.030, label: "M"}
+      - {id: comp, type: compressor, at: [0.21, 0.46], w: 0.15, h: 0.27, label: "압축기"}
+      - {id: cond, type: hx,         at: [0.48, 0.76], w: 0.26, h: 0.12, label: "응축기"}
+      - {id: vlv,  type: valve,      at: [0.76, 0.46], size: 0.075,      label: "팽창밸브"}
+      - {id: evap, type: hx,         at: [0.48, 0.14], w: 0.26, h: 0.12, label: "증발기"}
+    shafts:
+      - {from: mot, to: comp}
+    streams:
+      - {from: comp.top,    to: cond.left,   fluid: primary, route: VH}
+      - {from: cond.right,  to: vlv.top,     fluid: primary, route: HV}
+      - {from: vlv.bottom,  to: evap.right,  fluid: primary, route: VH}
+      - {from: evap.left,   to: comp.bottom, fluid: primary, route: HV}
+      - {to: evap.bottom, fluid: heat_source, direction: down, length: 0.09, dx: -0.07, into: true, label: "저온 열원"}
+      - {to: cond.top,    fluid: heat_sink,   direction: up,   length: 0.07, dx: 0.0,   label: "고온 열공급"}

@@ -1,0 +1,61 @@
+# 연차별 추진 일정 — 진도표(간트) (workspace/hthp-2027 FIG-6)
+#
+# 출처: workspace/hthp-2027/sections/03_비전목표.md 3-2 연차별 핵심목표 표,
+#       그리고 같은 절의 「실증 착수 공정」·「인허가·안전검사 공정」 주 단위 배정.
+#
+# 눈금 좌표 — 눈금 k = k차년도 시작. span: [1, 2] = 1차년도 한 해.
+#   주 단위 공정은 소수로 적는다 (10주 ≈ 10/52 ≈ 0.19).
+kind: gantt
+preset: turbo
+canvas: wide
+dpi: 200
+width_mm: 170
+
+area: {left: 0.020, right: 0.980, bottom: 0.070, top: 0.965}
+label_width: 0.240
+header_h: 0.120
+phase_h: 0.072
+bar_h: 0.600
+
+corner: "세부 추진과제"
+columns:      ["1차(2027)", "2차(2028)", "3차(2029)", "4차(2030)", "5차(2031)"]
+column_notes: ["TRL 3→4",   "TRL 4",     "TRL 5",     "TRL 6",     "TRL 7"]
+
+phases:
+  - {span: [1, 4], label: "1단계 — 설계·단품 검증"}
+  - {span: [4, 6], label: "2단계 — 통합 제작·현장 실증"}
+
+rows:
+  - label: "사이클 설계·설계기준"
+    bars: [{span: [1, 2], style: phase1, label: "해석모델·설계기준"}]
+
+  - label: "터보 압축기·MVR 블로워"
+    bars: [{span: [1.5, 3.5], style: phase1, label: "설계·시작품·성능시험"}]
+
+  - label: "저GWP 자연냉매 적용성"
+    bars: [{span: [2, 4], style: phase1, label: "열안정성·재료 적합성"}]
+
+  - label: "고온 축열 결합·열화"
+    bars: [{span: [2.5, 4], style: phase1, label: "축열 열화·결합 운전"}]
+
+  - label: "제어·성능예측 모델"
+    bars:
+      - {span: [3, 4], style: phase1, label: "데이터 수집체계"}
+      - {span: [4, 6], style: phase2, label: "제어 알고리즘·성능 예측"}
+
+  - label: "1MWth급 통합 제작·시운전"
+    bars:
+      - {span: [4, 4.8], style: phase2, label: "통합 제작"}
+      - {span: [4.8, 5.0], style: prep}
+
+  - label: "실증 사이트 협약·설치 설계"
+    bars: [{span: [4.5, 5.0], style: prep}]
+    milestones: [{at: 5.0, label: "사이트 확정"}]
+
+  - label: "현장 설치·검사 후 실증 운전(누적 2,000시간)"
+    bars:
+      - {span: [5.0, 5.19], style: prep}
+      - {span: [5.19, 5.31], style: prep}
+      - {span: [5.31, 6.0], style: phase2, label: "실증 운전"}
+
+legend: "막대 채움 — 청색 1단계 · 주황 2단계 · 빗금 설치·시운전 및 검사 준비 공정"

@@ -1,0 +1,10 @@
+# 사람이 정정한 값. profile.yaml을 재생성해도 이 파일은 살아남고
+# profile.py가 항상 deep-merge 한다.
+#
+# 예시:
+# roles:
+#   heading_2:
+#     para: '16'
+#     char: '10'
+#     confidence: high
+#     evidence: 사람 확인 완료

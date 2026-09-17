@@ -1,0 +1,54 @@
+# AI 물질발굴 기반 냉매 개발 — 수행체계 조직도
+#
+# 격자형이므로 lattice 엔진(경로 C)으로 그린다.
+#   · 사이클이 아니다 → 개괄도 글리프 어휘 밖
+#   · 라벨이 곧 내용이다 → AI 이미지로는 기관명을 정확히 못 넣는다
+# 출처: workspace/ai-refrigerant/_ws/ (주관 = 에스케이이노베이션(주), 품목지정)
+kind: orgchart
+preset: turbo
+canvas: wide
+dpi: 200
+width_mm: 170
+
+area: {left: 0.020, right: 0.980}
+
+tiers:
+  - y: 0.893
+    nodes:
+      - {id: pm, label: "총괄연구책임자\n(에스케이이노베이션)", role: lead, w: 0.300, h: 0.170}
+
+  - y: 0.610
+    h: 0.150
+    gap: 0.170
+    nodes:
+      - {id: sk,   label: "에스케이이노베이션", body: "주관", role: lead}
+      - {id: ai,   label: "AI 물질발굴 연구기관", body: "공동", role: joint}
+      - {id: hp,   label: "히트펌프 제작기업", body: "공동", role: joint}
+      - {id: univ, label: "국내 대학", body: "위탁", role: entrust}
+
+  - y: 0.245
+    h: 0.300
+    gap: 0.170
+    nodes:
+      - {id: r_sk,   label: "합성·물성 검증 총괄", body: "후보 물질 합성\n물성 실측\n적용성 평가 총괄"}
+      - {id: r_ai,   label: "물질발굴 모델", body: "생성 모델 구축\n후보군 스크리닝\n물성 예측"}
+      - {id: r_hp,   label: "시스템 적용·실증", body: "시작품 제작\n사이클 성능시험\n현장 운전 지원"}
+      - {id: r_univ, label: "독성·안정성 기초", body: "무독성 평가\n열안정성\n분해생성물 분석"}
+
+nodes:
+  - {id: ops,  label: "연구운영위원회", body: "월 1회 기술회의\n분기 1회 성과점검",
+     at: [0.115, 0.893], w: 0.205, h: 0.170}
+  - {id: coop, label: "협력기관", body: "공인시험기관\n환경·안전 인증기관",
+     at: [0.885, 0.893], w: 0.205, h: 0.170}
+
+edges:
+  - {from: ops,  to: pm, route: H, style: dashed}
+  - {from: pm,   to: coop, route: H, style: dashed}
+  - {from: pm,   to: sk,   mid: 0.735}
+  - {from: pm,   to: ai,   mid: 0.735}
+  - {from: pm,   to: hp,   mid: 0.735}
+  - {from: pm,   to: univ, mid: 0.735}
+  - {from: sk,   to: r_sk,   route: V}
+  - {from: ai,   to: r_ai,   route: V}
+  - {from: hp,   to: r_hp,   route: V}
+  - {from: univ, to: r_univ, route: V}

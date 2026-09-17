@@ -1,0 +1,577 @@
+# -*- coding: utf-8 -*-
+"""하네스 조립 파이프라인 실행기 — form_strip → kordoc → 헤더 패치 → 표 폭 재단.
+
+    python $CLAUDE_PLUGIN_ROOT/scripts/harness_assemble.py --run workspace/ai-refrigerant/B_동결3회/c1
+
+`rfp-proposal-harness` 의 `hwpx-writing` SKILL §3-1~§3-3b 를 그대로 옮긴 것이다.
+**절차를 바꾸지 않는다** — 3회 실행이 같은 절차를 밟아야 재현성 측정이 성립한다.
+
+## 왜 스크립트로 만들었나
+
+원 SKILL 은 헤더 패치를 **문서 안의 파이썬 블록**으로 준다. 사람이 복사해 붙이는 방식이라
+3회 실행에서 한 글자라도 달라지면 그게 곧 비결정성이 된다. 절차 자체를 고정한다.
+
+## 원 SKILL 이 실측으로 경고한 함정 (전부 반영)
+
+| # | 함정 | 안 지키면 |
+|---|---|---|
+| 3-1 ⓪ | 가이드 주석을 지운 `.build.md` 로 조립 | J-5 FAIL |
+| 3-2 | `--h2-marker none` 누락 | 장 제목 번호가 사라진다(조용히) |
+| 3-3 ① | 여백 좌우 5669 → **8504** | 서식 미준수 |
+| 3-3 ③ | 목록 문단 위 간격 □22/ㅇ14.7pt → **□6/ㅇ0** | 같은 원고가 **10p → 19p** |
+| 3-3 ④ | 본문 11.73pt → **11pt**, 표 8.8 → **9pt** | 규정 위반 108회 |
+| 3-3b | 여백 패치 후 표 폭 재단 | 본문폭 42,519 에 46,389 표 — 오른쪽 여백 13.6mm 침범 |
+| — | `mimetype` 은 **ZIP_STORED** | 파일이 안 열린다 |
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import shutil
+import subprocess
+import sys
+import zipfile
+
+def _find_plugin() -> str:
+    """설치된 rfp-proposal-harness 를 찾는다.
+
+    ★ 버전을 박아두지 않는다(2026-09-01 정정). 전에는 `0.30.0` 을 하드코딩해
+      다른 PC 에 다른 버전이 깔려 있으면 조용히 깨졌다 — 이식성 검증을 하려는
+      스크립트 자체가 이식되지 않는 셈이었다.
+      여러 버전이 있으면 **가장 높은 것**을 쓴다.
+    """
+    import glob
+    base = os.path.join(os.path.expanduser("~"), ".claude", "plugins", "cache",
+                        "jinwoo-skills", "rfp-proposal-harness")
+    cands = sorted(glob.glob(os.path.join(base, "*")),
+                   key=lambda p: [int(x) if x.isdigit() else 0
+                                  for x in os.path.basename(p).split(".")])
+    if not cands:
+        raise SystemExit(
+            "rfp-proposal-harness 가 설치돼 있지 않다.\n"
+            "  /plugin marketplace add JINWOOYOO86/claude-skills-marketplace\n"
+            "  /plugin install rfp-proposal-harness@jinwoo-skills")
+    return cands[-1]
+
+
+# ★ 2026-09-07 플러그인 탐색을 호출 시점으로 미룬다.
+#   전에는 모듈 최상단에서 찾아 **import 만 해도 SystemExit** 이 났다.
+#   그 탓에 플러그인이 없는 PC 에서 pytest 가 2건 실패했다(실측).
+#   조립과 무관한 freeze_zip_times 를 쓰려는 테스트까지 죽었고,
+#   「설치 전에 먼저 테스트로 확인하라」는 안내가 거짓이 된다.
+def plugin_paths():
+    """(scripts 디렉터리, 기본 명세 경로) — 조립할 때만 불린다."""
+    plugin = _find_plugin()
+    return (os.path.join(plugin, "skills", "hwpx-writing", "scripts"),
+            os.path.join(plugin, "skills", "template-extraction", "assets",
+                         "default-form", "default_form_spec.json"))
+
+def resolve_page_budget(run_dir: str, asked: int | None) -> tuple[int, str]:
+    """이 회차의 쪽수를 **한 곳에서** 정한다 → (쪽수, 출처 설명).
+
+    ★ 2026-09-15. 전에는 분량이 세 군데에 흩어져 서로를 몰랐다 —
+      ⓐ 이 스크립트의 `--max-pages`(조립 하드캡),
+      ⓑ 워크스페이스 `50_form_spec.json` 의 `page_budget.hard_max`(gate_pages 가 읽는다),
+      ⓒ 같은 파일의 `page_budget.total` · `chapters`(장별 배분 판정).
+      `demo-15p` 는 ⓐ 로만 15쪽이 됐고 ⓑ 는 15, ⓒ 는 **10 인 채로 남아** 있었다.
+      gate_pages 는 `total > pb["total"]` 이면 장별 허용오차를 0.5p → 0.25p 로 조인다.
+      즉 15쪽 판은 **늘 가장 엄한 모드**로 돌고 있었다(코드상 사실).
+
+    규칙(사용자, 2026-09-09): 말하지 않으면 10쪽, 말하면 그 분량.
+    말한 값은 **목표이자 상한**이다 — 둘을 갈라 두면 위의 조임이 다시 살아난다.
+    """
+    import json
+    spec_path = os.path.join(run_dir, "50_form_spec.json")
+    spec = None
+    if os.path.exists(spec_path):
+        spec = json.load(open(spec_path, encoding="utf-8"))
+
+    if asked is None:
+        if spec and "hard_max" in spec.get("page_budget", {}):
+            n = int(spec["page_budget"]["hard_max"])
+            return n, f"{os.path.basename(spec_path)} page_budget.hard_max"
+        return 10, "기본값(분량 미지정)"
+
+    if spec is None:
+        return asked, "--max-pages (워크스페이스 명세 없음)"
+
+    pb = spec.setdefault("page_budget", {})
+    if pb.get("total") == asked and pb.get("hard_max") == asked:
+        return asked, "--max-pages (명세와 일치)"
+
+    old_total = pb.get("total") or asked
+    ch = pb.get("chapters") or {}
+    if ch and old_total:
+        r = asked / old_total
+        scaled = {k: round(v * r, 1) for k, v in ch.items()}
+        gap = round(asked - sum(scaled.values()), 1)
+        if gap:                                   # 배분 합이 총량과 어긋나지 않게 한다
+            big = max(scaled, key=lambda k: scaled[k])
+            scaled[big] = round(scaled[big] + gap, 1)
+        pb["chapters"] = scaled
+    pb["total"] = asked
+    pb["hard_max"] = asked
+    pb["note_max_pages"] = (f"--max-pages {asked} 로 조립하면서 맞췄다. "
+                            "분량은 한 곳에서만 정한다 — 조립 하드캡과 gate_pages 가 "
+                            "서로 다른 수를 보면 통과가 통과가 아니다.")
+    json.dump(spec, open(spec_path, "w", encoding="utf-8"),
+              ensure_ascii=False, indent=1)
+    return asked, f"--max-pages → {os.path.basename(spec_path)} 에 반영"
+
+
+MARGIN = ('<hp:margin header="4252" footer="4252" gutter="0" '
+          'left="8504" right="8504" top="5668" bottom="4252"/>')
+FONTS = ["함초롬바탕", "함초롬돋움", "한양신명조", "한양중고딕", "HY견고딕"]
+
+
+def run(cmd, **kw):
+    """하위 프로세스를 돌린다.
+
+    ★ 출력을 **UTF-8 로 읽는다** (2026-09-15 실측). `text=True` 만 주면 파이썬은
+      로케일 인코딩으로 읽는데, 한국어 윈도에서는 그게 cp949 다. 자식들은
+      (PYTHONIOENCODING=utf-8 인 파이썬도, Node 인 kordoc 도) UTF-8 로 쓰므로
+      조립 로그가 통째로 깨져 나왔다 — 「PASS ��� �옍議� 0嫄�」.
+      기능은 멀쩡한데 **고장난 것처럼 보이는** 종류라, 남의 PC 에서 먼저 의심받는다.
+    """
+    kw.setdefault("encoding", "utf-8")
+    r = subprocess.run(cmd, capture_output=True, text=True,
+                       errors="replace", **kw)
+    return r
+
+
+def patch_header(raw: str, out: str) -> None:
+    """SKILL §3-3 을 그대로 옮긴 헤더 패치."""
+    zin = zipfile.ZipFile(raw)
+    sec0 = zin.read("Contents/section0.xml").decode("utf-8")
+
+    def ptxt(p):
+        return "".join(re.findall(r"<hp:t>([^<]*)</hp:t>", p)).strip()
+
+    h2, h3, body = set(), set(), set()
+    for para in re.findall(r"<hp:p\b.*?</hp:p>", sec0, re.S):
+        cr = re.search(r'charPrIDRef="(\d+)"', para)
+        if not cr:
+            continue
+        t = ptxt(para)
+        tgt = (h2 if re.match(r"^\d+\.\s", t)
+               else h3 if re.match(r"^\d+-\d+\.\s", t) else body)
+        tgt.add(cr.group(1))
+    h2 -= body
+    h3 -= body
+
+    zout = zipfile.ZipFile(out, "w")
+    for it in zin.infolist():
+        d = zin.read(it.filename)
+        if it.filename.startswith("Contents/section"):
+            s = d.decode("utf-8")
+            s = re.sub(r"<hp:margin[^>]*/>", MARGIN, s)
+            d = s.encode("utf-8")
+        if it.filename.endswith("header.xml"):
+            h = d.decode("utf-8")
+            for f in FONTS:
+                h = h.replace('face="%s"' % f, 'face="돋움"')
+            for pid, prev, left in [("8", "600", "0"), ("9", "0", "1100"),
+                                    ("10", "0", "2200")]:
+                def fix(m, prev=prev, left=left):
+                    s = m.group(0)
+                    s = re.sub(r'<hc:prev value="\d+"',
+                               '<hc:prev value="%s"' % prev, s)
+                    s = re.sub(r'<hc:left value="\d+"',
+                               '<hc:left value="%s"' % left, s)
+                    s = re.sub(r'<hc:intent value="-?\d+"',
+                               '<hc:intent value="-1650"', s)
+                    return s
+                h = re.sub(r'<hh:paraPr id="%s".*?</hh:paraPr>' % pid, fix,
+                           h, flags=re.S)
+
+            def norm(m):
+                cid, blk = m.group(1), m.group(0)
+                if cid in h2 or cid in h3:
+                    return blk
+
+                def sz(mm):
+                    v = int(mm.group(1))
+                    if 1000 <= v <= 1250:
+                        v = 1100
+                    elif 850 <= v <= 999:
+                        v = 900
+                    return 'height="%d"' % v
+                return re.sub(r'height="(\d+)"', sz, blk)
+            h = re.sub(r'<hh:charPr id="(\d+)".*?</hh:charPr>', norm, h,
+                       flags=re.S)
+
+            def h3fix(m):
+                blk = m.group(0)
+                if m.group(1) not in h3:
+                    return blk
+                # ★ 2026-09-07 절 제목 13pt → **11pt**(사용자 지시).
+                #   「1.」 같은 장만 16pt, 하위 절은 전부 본문과 같은 11pt 로 고정한다.
+                #   굵기는 유지한다 — 크기가 같아지면 굵기가 유일한 제목 신호다.
+                blk = re.sub(r'height="\d+"', 'height="1100"', blk)
+                return (blk if "<hh:bold" in blk
+                        else blk.replace("</hh:charPr>", "<hh:bold/></hh:charPr>"))
+            h = re.sub(r'<hh:charPr id="(\d+)".*?</hh:charPr>', h3fix, h,
+                       flags=re.S)
+            d = h.encode("utf-8")
+        zi = zipfile.ZipInfo(it.filename, date_time=it.date_time)
+        zi.compress_type = (zipfile.ZIP_STORED if it.filename == "mimetype"
+                            else zipfile.ZIP_DEFLATED)
+        zout.writestr(zi, d)
+    zout.close()
+    zin.close()
+
+
+SEC_RE = re.compile(r"^\s*\d+(-\d+)?\.\s")
+# 장 제목만(1. 2. 3.) — 절(1-1.)은 제외한다.
+CHAP_RE = re.compile(r"^\s*\d+\.\s")
+
+# 조립에 쓰는 kordoc 을 정확한 버전으로 고정한다. 이유는 [2/4] 단계 주석 참조.
+KORDOC = "kordoc@4.12.3"
+
+
+def insert_section_gaps(path: str) -> int:
+    """절 제목 문단 앞에 빈 문단을 하나씩 넣는다.
+
+    ★ 사용자 제출 요건: **절이 바뀔 때마다 빈 줄.**
+
+    실측(2026-08-27): 하네스 조립 경로로 만든 3판이 절 제목 17개 중
+    **16 / 16 / 15 곳에서 빈 줄이 없었다.** 앞 절 마지막 줄과 다음 절 제목이
+    바짝 붙어 절 경계가 눈으로 구분되지 않는다.
+
+    작성자에게 맡기면 매번 갈리므로 **조립 단계에서 넣는다.**
+    (이 저장소의 `engine/hwpx/build_hwpx.py` 가 이미 같은 처리를 한다 — 그쪽은 0곳이다.)
+
+    문서 첫 절 앞에는 넣지 않는다. 표 안 문단은 건드리지 않는다.
+    """
+    from lxml import etree
+    HP = "{http://www.hancom.co.kr/hwpml/2011/paragraph}"
+
+    with zipfile.ZipFile(path) as z:
+        names = z.namelist()
+        data = {n: z.read(n) for n in names}
+        infos = {i.filename: i for i in z.infolist()}
+
+    root = etree.fromstring(data["Contents/section0.xml"])
+
+    # ★ 빈 문단이 쓸 **본문 글자 모양**을 먼저 정한다.
+    #   실측 결함(2026-09-01): 제목 문단을 복제해 빈 문단을 만들었더니
+    #   charPr 이 제목 것(13pt 굵게 · 16pt)으로 남아 gate_form 이 잡았다 —
+    #   F-9 규격 외 33건 · F-10 굵기 18%(상한 5%).
+    #   빈 줄은 눈에 안 보이므로 사람은 못 잡는다. 게이트가 잡았다.
+    #
+    #   본문 charPr 은 하드코딩하지 않는다(양식마다 다르다) —
+    #   **표 밖 텍스트 문단에서 가장 많이 쓰인 charPr** 을 본문으로 본다.
+    from collections import Counter
+    cnt = Counter()
+    for p in root.iter(HP + "p"):
+        if any(a.tag.endswith("}tbl") for a in p.iterancestors()):
+            continue
+        if not "".join(t.text or "" for t in p.iter(HP + "t")).strip():
+            continue
+        for run in p.iter(HP + "run"):
+            if run.find(HP + "t") is not None:
+                cnt[run.get("charPrIDRef")] += 1
+                break
+    body_char = cnt.most_common(1)[0][0] if cnt else None
+
+    added = 0
+    first = True
+    for para in list(root.iter(HP + "p")):
+        # 표 안 문단은 제외
+        if any(a.tag.endswith("}tbl") for a in para.iterancestors()):
+            continue
+        txt = "".join(t.text or "" for t in para.iter(HP + "t")).strip()
+        if not SEC_RE.match(txt) or len(txt) > 60:
+            continue
+        if first:                     # 문서 첫 절 앞에는 넣지 않는다
+            first = False
+            continue
+        prev = para.getprevious()
+        if prev is not None:
+            ptxt = "".join(t.text or "" for t in prev.iter(HP + "t")).strip()
+            if ptxt == "":
+                continue              # 이미 빈 줄이 있다
+            # ★ 2026-09-10 사용자 지시: 대제목(1. 2. 3.) 바로 다음에는 넣지 않는다.
+            #   「1. 연구 배경」 다음에 바로 「1-1. …」이 오는 경우,
+            #   그 사이에 빈 줄을 넣으면 제목만 둥둥 떠 있는 모양이 된다.
+            #   절 사이의 여백은 필요하지만 장→절 경계는 아니다.
+            if CHAP_RE.match(ptxt) and len(ptxt) <= 60:
+                continue
+        blank = etree.fromstring(etree.tostring(para))
+        for run in blank.findall(HP + "run"):
+            for t in run.findall(HP + "t"):
+                run.remove(t)
+            if body_char:             # ★ 제목 서식을 물려받지 않게 본문으로 되돌린다
+                run.set("charPrIDRef", body_char)
+        for ls in blank.findall(HP + "linesegarray"):
+            blank.remove(ls)          # 줄 수가 달라지므로 한글이 재계산하게 둔다
+        para.addprevious(blank)
+        added += 1
+
+    data["Contents/section0.xml"] = etree.tostring(
+        root, encoding="utf-8", xml_declaration=True)
+    with zipfile.ZipFile(path, "w") as o:
+        for n in names:
+            o.writestr(infos[n], data[n],
+                       zipfile.ZIP_STORED if n == "mimetype" else zipfile.ZIP_DEFLATED)
+    return added
+
+
+def insert_object_gaps(path: str) -> int:
+    """그림·표 **앞뒤에 빈 문단**을 넣는다.
+
+    ★ 사용자 요건(2026-09-14): 그림과 표는 앞뒤로 한 줄씩 떨어져야 한다.
+
+    실측: 원고(.build.md)에는 앞뒤 빈 줄이 다 있는데 **kordoc 이 먹는다.**
+      그림 3장 앞 0 · 뒤 0, 표 6개 앞 0 · 뒤 2.
+      마크다운을 고쳐도 안 되므로 조립 단계에서 넣는다.
+
+    본문 charPr 을 물려주는 이유는 `insert_section_gaps` 와 같다 —
+    캡션 문단을 복제하면 굵기·크기가 따라와 게이트가 잡는다.
+    """
+    from collections import Counter
+
+    from lxml import etree
+    HP = "{http://www.hancom.co.kr/hwpml/2011/paragraph}"
+
+    with zipfile.ZipFile(path) as z:
+        names = z.namelist()
+        data = {n: z.read(n) for n in names}
+        infos = {i.filename: i for i in z.infolist()}
+
+    root = etree.fromstring(data["Contents/section0.xml"])
+
+    cnt = Counter()
+    for para in root.iter(HP + "p"):
+        if any(a.tag.endswith("}tbl") for a in para.iterancestors()):
+            continue
+        if not "".join(t.text or "" for t in para.iter(HP + "t")).strip():
+            continue
+        for run in para.iter(HP + "run"):
+            if run.find(HP + "t") is not None:
+                cnt[run.get("charPrIDRef")] += 1
+                break
+    body_char = cnt.most_common(1)[0][0] if cnt else None
+
+    def is_blank(p):
+        if p is None:
+            return True                    # 문서 경계는 빈 줄로 친다
+        if p.find("." + "//" + HP + "pic") is not None:
+            return False
+        if p.find("." + "//" + HP + "tbl") is not None:
+            return False
+        return not "".join(t.text or "" for t in p.iter(HP + "t")).strip()
+
+    def make_blank(model):
+        b = etree.fromstring(etree.tostring(model))
+        for obj in list(b.iter(HP + "pic")) + list(b.iter(HP + "tbl")):
+            obj.getparent().remove(obj)
+        for run in b.findall(HP + "run"):
+            for t in run.findall(HP + "t"):
+                run.remove(t)
+            if body_char:
+                run.set("charPrIDRef", body_char)
+        for ls in b.findall(HP + "linesegarray"):
+            b.remove(ls)
+        return b
+
+    added = 0
+    for para in list(root.iter(HP + "p")):
+        if any(a.tag.endswith("}tbl") for a in para.iterancestors()):
+            continue
+        has_obj = (para.find("." + "//" + HP + "pic") is not None
+                   or para.find("." + "//" + HP + "tbl") is not None)
+        if not has_obj:
+            continue
+        if not is_blank(para.getprevious()):
+            para.addprevious(make_blank(para))
+            added += 1
+        if not is_blank(para.getnext()):
+            para.addnext(make_blank(para))
+            added += 1
+
+    data["Contents/section0.xml"] = etree.tostring(
+        root, encoding="utf-8", xml_declaration=True)
+    with zipfile.ZipFile(path, "w") as o:
+        for n in names:
+            o.writestr(infos[n], data[n],
+                       zipfile.ZIP_STORED if n == "mimetype"
+                       else zipfile.ZIP_DEFLATED)
+    return added
+
+
+def unset_table_treat_as_char(path: str) -> int:
+    """표의 **「글자처럼 취급」을 해제**한다 (hp:pos/@treatAsChar = 0).
+
+    ★ 2026-09-10 사용자 지시. 실측하니 kordoc 산출물도 양식 원본도 `1` 이었다.
+      글자처럼 취급하면 표가 문단 흐름에 얹혀 앞뒤 줄바꿈·여백이 글자 기준으로
+      계산된다. 표를 독립 개체로 두는 편이 쪽 넘김과 여백이 예측 가능하다.
+
+    그림은 건드리지 않는다 — 지시가 표에 한정됐다.
+    """
+    from lxml import etree
+    HP = "{http://www.hancom.co.kr/hwpml/2011/paragraph}"
+
+    with zipfile.ZipFile(path) as z:
+        names = z.namelist()
+        data = {n: z.read(n) for n in names}
+        infos = {i.filename: i for i in z.infolist()}
+
+    root = etree.fromstring(data["Contents/section0.xml"])
+    n = 0
+    for tbl in root.iter(HP + "tbl"):
+        pos = tbl.find(HP + "pos")
+        if pos is not None and pos.get("treatAsChar") != "0":
+            pos.set("treatAsChar", "0")
+            n += 1
+
+    data["Contents/section0.xml"] = etree.tostring(
+        root, encoding="utf-8", xml_declaration=True)
+    with zipfile.ZipFile(path, "w") as o:
+        for name in names:
+            o.writestr(infos[name], data[name],
+                       zipfile.ZIP_STORED if name == "mimetype"
+                       else zipfile.ZIP_DEFLATED)
+    return n
+
+
+def freeze_zip_times(path: str, stamp=(1980, 1, 1, 0, 0, 0)) -> None:
+    """ZIP 타임스탬프를 상수로 고정한다.
+
+    ★ 실측(2026-09-07): 같은 원고를 세 번 조립하니 sha256 이 **세 번 다 달랐다.**
+      엔트리 내용은 9개 전부 바이트 동일했고 **date_time 만** 달랐다.
+      절대원칙 4(같은 입력이 같은 바이트)는 컨테이너까지 고정해야 성립한다.
+      재현자료로 「같은 명령이 같은 파일을 만든다」를 보이려면 이 한 단계가 필요하다.
+    """
+    with zipfile.ZipFile(path) as z:
+        names = z.namelist()
+        data = {n: z.read(n) for n in names}
+        comp = {i.filename: i.compress_type for i in z.infolist()}
+    with zipfile.ZipFile(path, "w") as o:
+        for n in names:
+            zi = zipfile.ZipInfo(n, date_time=stamp)
+            zi.compress_type = comp[n]
+            zi.external_attr = 0o600 << 16
+            o.writestr(zi, data[n])
+
+
+def page_count(path: str, cap: int) -> int | None:
+    """한컴으로 쪽수를 재고 하드캡과 대조한다.
+
+    ★ 제출 요건이 **10쪽을 넘으면 안 된다**이므로 추정으로 넘기지 않는다.
+      pywin32 가 RPC 로 죽는 PC 가 있어 PowerShell 경로를 쓴다.
+    """
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from engine.hwpx import hancom_check
+    r = hancom_check.check_via_powershell(path)
+    return r.get("pages")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--run", required=True, help="회차 디렉터리 (30_proposal.md 가 있는 곳)")
+    # ★ 기본값 10 은 사용자 규칙이다(2026-09-09).
+    #   「분량을 말하지 않으면 10쪽, 말하면 그 분량에 맞춘다.」
+    #   임의로 늘리지 마라 — 분량은 제출 요건이지 권고가 아니다.
+    ap.add_argument("--max-pages", type=int, default=None,
+                    help="쪽수. 이 값이 목표이자 상한이다. 생략하면 워크스페이스 "
+                         "50_form_spec.json 의 page_budget.hard_max, 그것도 없으면 10")
+    a = ap.parse_args()
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+    SCRIPTS, SPEC = plugin_paths()      # 여기서 처음 필요해진다
+    d = os.path.abspath(a.run)
+    src = os.path.join(d, "30_proposal.md")
+    build = os.path.join(d, "30_proposal.build.md")
+    raw = os.path.join(d, "30_raw.hwpx")
+    final = os.path.join(d, "30_proposal.hwpx")
+    if not os.path.exists(src):
+        print("원고가 없다: " + src)
+        return 2
+
+    max_pages, why = resolve_page_budget(d, a.max_pages)
+    print(f"[분량] {max_pages}쪽 — {why}")
+
+    print("[1/4] form_strip")
+    r = run([sys.executable, os.path.join(SCRIPTS, "form_strip.py"),
+             "--in", src, "--out", build, "--spec", SPEC],
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+    print("   " + (r.stdout or r.stderr).strip().splitlines()[-1])
+    if not os.path.exists(build):
+        return 2
+
+    # ★ 그림은 사용자가 요청할 때만 (2026-09-17). 요청 목록은 requirements.md 의
+    #   `figures:` 한 줄이고, 선언이 없으면 요청이 없는 것으로 본다.
+    #   다른 PC 실행에서 요청 안 한 그림 두 장이 들어갔다 — 규칙은 문서에만 있었다.
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import check_figures
+    ok, msg = check_figures.check(build, os.path.join(d, "requirements.md"))
+    print("[그림] 요청한 것만 들어갔는가")
+    for line in msg.splitlines():
+        print("   " + line.strip())
+    if not ok:
+        return 2
+
+    print("[2/4] kordoc generate")
+    # ★ 버전을 고정한다 (2026-09-07). 전에는 `kordoc@^4` 였는데 부동 범위라
+    #   npx 가 그때그때 최신 4.x 를 받았다. **4.13.0 이 골격 마커를 회귀시킨다** —
+    #   같은 원고(build.md 바이트 동일)로:
+    #       4.12.3 → □34 · ○64   (커밋된 산출물과 일치)
+    #       4.13.1 → □12 · ○34   + 절 제목에 □ 를 본문 텍스트로 주입
+    #   □ 가 제목 앞에 붙으면 SEC_RE(`^\d+(-\d+)?\. `)가 하나도 안 맞아
+    #   절 앞 빈 줄 삽입이 **0건으로 조용히 무동작**했다(요구사항 미충족).
+    #   절대원칙 4(같은 입력이 같은 바이트)는 도구 버전까지 고정해야 성립한다.
+    figdir = os.path.join(d, "figures")
+    imgopt = ["--image-dir", figdir] if os.path.isdir(figdir) else []
+    if imgopt:
+        print(f"   그림 디렉터리: {figdir}")
+    r = run(["npx", "-y", KORDOC, "generate", build, "-o", raw, *imgopt,
+             "--preset", "계획서", "--font", "gothic", "--pt", "11",
+             "--line-spacing", "160", "--paper", "A4",
+             "--h2-marker", "none", "--bullet2", "○",
+             "--fonts", "body=돋움,heading=돋움,table=돋움"],
+            cwd=d, shell=True)
+    tail = [l for l in (r.stdout or "").splitlines() if l.strip()][-3:]
+    for l in tail:
+        print("   " + l)
+    if not os.path.exists(raw):
+        print("   kordoc 실패: " + (r.stderr or "")[:300])
+        return 2
+
+    print("[3/4] 헤더 패치 (여백·글꼴·글자크기·목록 간격)")
+    patch_header(raw, final)
+    print("   → " + os.path.basename(final))
+
+    print("[4/4] 표 폭 재단")
+    r = run([sys.executable, os.path.join(SCRIPTS, "fix_table_width.py"),
+             "--hwpx", final],
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+    out = (r.stdout or r.stderr).strip().splitlines()
+    print("   " + (out[-1] if out else "(출력 없음)"))
+
+    print("[5/6] 절 제목 앞 빈 줄 삽입")
+    added = insert_section_gaps(final)
+    print(f"   빈 문단 {added}개 삽입")
+
+    og = insert_object_gaps(final)
+    print(f"   그림·표 앞뒤 빈 줄 {og}개 삽입")
+    tac = unset_table_treat_as_char(final)
+    print(f"   표 글자처럼취급 해제 {tac}개")
+
+    freeze_zip_times(final)          # 재현성: 컨테이너 시각 고정
+
+    print(f"[6/6] 쪽수 하드캡 검사 (상한 {max_pages}쪽)")
+    pages = page_count(final, max_pages)
+    if pages is None:
+        print("   ⚠ 한컴을 실행하지 못해 **미측정**. 제출 전 반드시 수동 확인할 것")
+        return 1
+    if pages > max_pages:
+        print(f"   ✖ {pages}쪽 — 상한 {max_pages}쪽 초과. 산문을 줄여야 한다")
+        return 2
+    print(f"   ✔ {pages}쪽 (상한 {max_pages})")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

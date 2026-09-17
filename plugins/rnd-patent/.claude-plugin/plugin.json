@@ -1,0 +1,13 @@
+{
+  "name": "rnd-patent",
+  "description": "선행특허 조사와 회피설계 축 정리. 계획서의 「원천특허 만료·공백」 「회피설계 공백 영역」 항목을 근거와 함께 채운다. 「특허 조사」 「선행특허」 「회피설계」 요청 시 트리거.",
+  "version": "0.1.0",
+  "license": "MIT",
+  "author": {
+    "name": "Hyerim",
+    "email": "star2khr@gmail.com"
+  },
+  "dependencies": [
+    "rfp-proposal-harness@jinwoo-skills"
+  ]
+}

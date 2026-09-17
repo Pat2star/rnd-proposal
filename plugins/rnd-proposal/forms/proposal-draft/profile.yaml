@@ -1,0 +1,893 @@
+profile_version: 1
+form:
+  id: proposal-draft
+  template: template.hwpx
+  template_sha256: 9e7d17868156b50247c5f1d7e85ca3d331cb7130d1d082afc49c306dde6a5dc3
+  extracted_at: '2026-08-18'
+  extractor_version: 0.1.0
+page:
+  width: 59528
+  height: 84188
+  margin:
+    left: 5669
+    right: 5669
+    top: 2834
+    bottom: 4251
+    header: 4251
+    footer: 2834
+  text_width_computed: 48190
+  text_width_observed: 48188
+  text_width: 48188
+  hwpunit_per_mm: 283.465
+  hwpunit_per_px96: 75
+section_prologue:
+  raw_file: prologue_run.xml
+  first_para_attrs:
+    paraPrIDRef: '14'
+    styleIDRef: '0'
+    pageBreak: '0'
+    columnBreak: '0'
+    merged: '0'
+  note: secPr은 첫 문단 첫 run 안에 있다. 파싱하지 말고 원문을 그대로 삽입한다.
+roles:
+  table_header:
+    para: '71'
+    char: '95'
+    style: '21'
+    confidence: high
+    evidence: 표 안 cellAddr.rowAddr==0 문단의 최빈 (paraPr, charPr, style)
+    samples:
+    - 참고
+    - 출연연 연구기획 기반 제안서 양식(안)
+    - '01'
+    align: CENTER
+    line_spacing_pct: 130
+    indent_left: 0
+    intent: 0
+    char_height: 800
+    font: 돋움
+    bold: false
+  table_cell:
+    para: '98'
+    char: '135'
+    style: '29'
+    confidence: medium
+    evidence: 표 안 rowAddr!=0 문단의 최빈 조합
+    samples:
+    - 전략연구사업 과제명
+    - '※ 융합형의 경우, 반드시 두 단계(하이픈 '
+    - (ex. AAAAA 개발 (융합형 공동의 내
+    warning: '최빈 charPr 136는 #0000FF 양식 안내문이라 같은 크기 검정 135로 치환함'
+    review_question: '표 본문셀을 paraPr 98 / charPr 135로 잡았습니다. 최빈 charPr 136는 #0000FF 양식 안내문이라 같은 크기 검정 135로
+      치환함 맞습니까?'
+    align: CENTER
+    line_spacing_pct: 100
+    indent_left: 0
+    intent: 0
+    char_height: 900
+    font: Arial
+    bold: false
+  table_anchor:
+    para: '39'
+    char: '49'
+    style: '0'
+    confidence: medium
+    evidence: hp:tbl을 직접 담은 문단 (관측된 조합 19종)
+    review_question: 표 앵커 문단이 19종 관측됐습니다. paraPr 39가 맞습니까?
+    align: JUSTIFY
+    line_spacing_pct: 140
+    indent_left: 0
+    intent: 0
+    char_height: 1300
+    font: 한양중고딕
+    bold: true
+  bullet_level_0:
+    para: '92'
+    char: '125'
+    style: null
+    confidence: high
+    evidence: heading.type=BULLET, margin.left=1500 (본문 사용 14회) → 오름차순 0번째. 본문 미사용 BULLET paraPr ['41',
+      '45', '117'] 제외함
+    align: JUSTIFY
+    line_spacing_pct: 180
+    indent_left: 1500
+    intent: 0
+    char_height: 1200
+    font: 함초롬바탕
+    bold: false
+    bullet_char: ◦
+    heading:
+      type: BULLET
+      id_ref: '2'
+      level: 3
+  bullet_level_1:
+    para: '93'
+    char: '124'
+    style: null
+    confidence: high
+    evidence: heading.type=BULLET, margin.left=2500 (본문 사용 14회) → 오름차순 1번째. 본문 미사용 BULLET paraPr ['41',
+      '45', '117'] 제외함
+    align: JUSTIFY
+    line_spacing_pct: 180
+    indent_left: 2500
+    intent: 0
+    char_height: 1100
+    font: 함초롬바탕
+    bold: false
+    bullet_char: '-'
+    heading:
+      type: BULLET
+      id_ref: '3'
+      level: 1
+  heading_1:
+    para: '38'
+    char: '48'
+    style: '0'
+    confidence: medium
+    evidence: 'heading=NONE, indent=0, 글자높이 1500(본문 1200 초과), 텍스트 ^N. , tabPr=0, 첫등장 #154, 본문 12회 — 일치
+      신호 2개(텍스트패턴/등장순서)'
+    samples:
+    - 2. 정부·산업계 수요 연계성
+    - 3. 비전 및 목표
+    - 3-1 비전
+    review_question: 'heading_1을 paraPr 38 / charPr 48로 잡았습니다. 대안 후보: [''39'', ''37'']. 맞습니까?'
+    align: JUSTIFY
+    line_spacing_pct: 140
+    indent_left: 0
+    intent: -2331
+    char_height: 1500
+    font: 한양중고딕
+    bold: true
+  heading_2:
+    para: '39'
+    char: '48'
+    style: '0'
+    confidence: medium
+    evidence: 'heading=NONE, indent=0, 글자높이 1500(본문 1200 초과), 텍스트 ^N. , tabPr=0, 첫등장 #375, 본문 1회 — 일치
+      신호 2개(텍스트패턴/등장순서)'
+    samples:
+    - 6. 연구개발기관의 선행 사업·과제와 연계성 및
+    review_question: 'heading_2을 paraPr 39 / charPr 48로 잡았습니다. 대안 후보: [''38'', ''37'']. 맞습니까?'
+    align: JUSTIFY
+    line_spacing_pct: 140
+    indent_left: 0
+    intent: 0
+    char_height: 1500
+    font: 한양중고딕
+    bold: true
+  heading_3:
+    para: '37'
+    char: '48'
+    style: '0'
+    confidence: medium
+    evidence: 'heading=NONE, indent=0, 글자높이 1500(본문 1200 초과), 텍스트 ^N-N , tabPr=0, 첫등장 #97, 본문 7회 — 일치
+      신호 2개(텍스트패턴/등장순서)'
+    samples:
+    - 1. 필요성(배경)
+    - 1-1 기술/사회 문제 정의
+    - 1-2 국내외 기술 현황
+    review_question: 'heading_3을 paraPr 37 / charPr 48로 잡았습니다. 대안 후보: [''38'', ''39'']. 맞습니까?'
+    align: JUSTIFY
+    line_spacing_pct: 110
+    indent_left: 0
+    intent: -1885
+    char_height: 1500
+    font: 한양중고딕
+    bold: true
+  body:
+    para: '78'
+    char: '112'
+    style: '22'
+    confidence: medium
+    evidence: 제목/글머리/앵커로 배정되지 않은 평문단 중 최빈 (heading=NONE, indent=0, intent=0)
+    samples:
+    - 가. 인적사항
+    - '나. 학력(연구개발과제 특성에 따라 선택적으로 '
+    - '다. 경력(연구개발과제 특성에 따라 선택적으로 '
+    align: CENTER
+    line_spacing_pct: 133
+    indent_left: 0
+    intent: 0
+    char_height: 1100
+    font: 돋움체
+    bold: false
+  bullet_level_2:
+    para: '5'
+    char: '1'
+    style: '7'
+    confidence: low
+    evidence: 본문에 이 역할의 사례가 없다. 표준 스타일 '개요 6'(engName=Outline 6, id=7)의 문단모양 5 / 글자모양 1을 후보로 제안한다
+    warning: 'bullet_level_2: 관측 사례 없음 → 스타일 이름으로 추정 / paraPr 5는 heading=OUTLINE이라 한글이 개요 번호를 자동으로 붙인다.
+      BULLET 또는 NONE 문단모양이 안전하다.'
+    review_question: bullet_level_2을 표준 스타일 '개요 6'(paraPr 5 / charPr 1)로 잡았습니다. 본문에 이 역할의 사례가 없다라 관측으로는
+      확인할 수 없었습니다. 맞습니까?
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 6000
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  figure_caption:
+    para: '3'
+    char: '1'
+    style: '0'
+    confidence: low
+    evidence: 이 양식에는 그림 캡션 사례가 없다. 표준 스타일 '바탕글'(engName=Normal, id=0)의 문단모양 3 / 글자모양 1을 후보로 제안한다
+    warning: 'figure_caption: 관측 사례 없음 → 스타일 이름으로 추정'
+    review_question: figure_caption을 표준 스타일 '바탕글'(paraPr 3 / charPr 1)로 잡았습니다. 이 양식에는 그림 캡션 사례가 없다라 관측으로는
+      확인할 수 없었습니다. 맞습니까?
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 0
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  bullet_level_3:
+    para: '5'
+    char: '1'
+    style: '7'
+    confidence: none
+    evidence: 양식에 대응 서식이 없어 'bullet_level_2' 설정을 전용함
+    warning: bullet_level_3 미검출 → bullet_level_2 폴백 / paraPr 5는 heading=OUTLINE이라 한글이 개요 번호를 자동으로 붙인다.
+      BULLET 또는 NONE 문단모양이 안전하다.
+    fallback_of: bullet_level_2
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 6000
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  figure_anchor:
+    para: '78'
+    char: '112'
+    style: '22'
+    confidence: none
+    evidence: 양식에 대응 서식이 없어 'body' 설정을 전용함
+    warning: figure_anchor 미검출 → body 폴백
+    fallback_of: body
+    align: CENTER
+    line_spacing_pct: 133
+    indent_left: 0
+    intent: 0
+    char_height: 1100
+    font: 돋움체
+    bold: false
+  table_caption:
+    para: '3'
+    char: '1'
+    style: '0'
+    confidence: none
+    evidence: 양식에 대응 서식이 없어 'figure_caption' 설정을 전용함
+    warning: table_caption 미검출 → figure_caption 폴백
+    fallback_of: figure_caption
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 0
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  bold:
+    para: null
+    char: '63'
+    style: null
+    confidence: medium
+    evidence: 본문 높이(1100)와 같은 bold charPr ['63', '127'] 발견
+    char_height: 1100
+    font: 한양중고딕
+    bold: true
+    policy: apply
+numbering:
+  outline_ids:
+  - '1'
+  - '2'
+  levels:
+  - ^1.
+  - ^2.
+  - ^3)
+  - ^4)
+  - (^5)
+  - (^6)
+  - ^7
+  - ''
+  - ''
+  - ''
+bullets:
+  '1':
+    char: 
+  '2':
+    char: ◦
+  '3':
+    char: '-'
+table:
+  style_source: 양식의 표 사례에서 학습
+  tbl_border_fill: '3'
+  cell_spacing: 0
+  page_break: CELL
+  repeat_header: 1
+  width_budget: 48473
+  in_margin:
+    left: 510
+    right: 510
+    top: 141
+    bottom: 141
+  cell_margin:
+    left: 600
+    right: 600
+    top: 400
+    bottom: 400
+  default_row_height: 1386
+  stub_cols: 0
+  zone_rules:
+    outer: 0.3 mm
+    inner: 0.15 mm
+    header_fill: '#D6D6D6'
+    note: stub 없는 단순 표 전용. 원본 표는 재현하지 않는다. 양식에 이 조합이 없으면 가진 것 중 가장 가까운 borderFill로 근사한다.
+  borderfill_index:
+  - id: '1'
+    l: 0.1 mm
+    r: 0.1 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: null
+  - id: '2'
+    l: 0.1 mm
+    r: 0.1 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: null
+  - id: '3'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: null
+  - id: '4'
+    l: 0.1 mm
+    r: 0.1 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: null
+  - id: '5'
+    l: 0.1 mm
+    r: 0.1 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: null
+  - id: '6'
+    l: 0.5 mm
+    r: 0.5 mm
+    t: 0.5 mm
+    b: 0.5 mm
+    fill: '#2B2D63'
+  - id: '7'
+    l: 0.5 mm
+    r: 0.12 mm
+    t: 0.5 mm
+    b: 0.12 mm
+    fill: null
+  - id: '8'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.5 mm
+    b: 0.5 mm
+    fill: null
+  - id: '9'
+    l: 0.12 mm
+    r: 0.5 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: '#2B5686'
+  - id: '10'
+    l: 0.12 mm
+    r: 0.1 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: null
+  - id: '11'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: '#3A3C84'
+  - id: '12'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: '#DFE6F7'
+  - id: '13'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: '#D9D9D9'
+  - id: '14'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: null
+  - id: '15'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.1 mm
+    b: 0.12 mm
+    fill: null
+  - id: '16'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: '#7F7F7F'
+  - id: '17'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: null
+  - id: '18'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: '#F2F2F2'
+  - id: '19'
+    l: 0.15 mm
+    r: 0.15 mm
+    t: 0.15 mm
+    b: 0.15 mm
+    fill: null
+  - id: '20'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: '#F2F2F2'
+  - id: '21'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: '#F2F2F2'
+  - id: '22'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: null
+  - id: '23'
+    l: 0.3 mm
+    r: 0.3 mm
+    t: 0.3 mm
+    b: 0.3 mm
+    fill: null
+  - id: '24'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: null
+  - id: '25'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: null
+  - id: '26'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: null
+  - id: '27'
+    l: 0.1 mm
+    r: 0.1 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: '#1F4E79'
+  - id: '28'
+    l: 0.1 mm
+    r: 0.1 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: '#2E75B6'
+  - id: '29'
+    l: 0.12 mm
+    r: 0.15 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: '#D9D9D9'
+  - id: '30'
+    l: 0.1 mm
+    r: 0.1 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: '#D6E4F0'
+  - id: '31'
+    l: 0.15 mm
+    r: 0.15 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: '#D9D9D9'
+  - id: '32'
+    l: 0.15 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: '#D9D9D9'
+  - id: '33'
+    l: 0.1 mm
+    r: 0.1 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: '#FFF2CC'
+  - id: '34'
+    l: 0.1 mm
+    r: 0.1 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: null
+  - id: '35'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.15 mm
+    fill: '#D9D9D9'
+  - id: '36'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.15 mm
+    b: 0.12 mm
+    fill: '#D9D9D9'
+  - id: '37'
+    l: 0.12 mm
+    r: 0.15 mm
+    t: 0.12 mm
+    b: 0.15 mm
+    fill: null
+  - id: '38'
+    l: 0.12 mm
+    r: 0.15 mm
+    t: 0.15 mm
+    b: 0.12 mm
+    fill: null
+  - id: '39'
+    l: 0.15 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: null
+  - id: '40'
+    l: 0.3 mm
+    r: 0.3 mm
+    t: 0.25 mm
+    b: 0.25 mm
+    fill: null
+  - id: '41'
+    l: 0.3 mm
+    r: 0.3 mm
+    t: 0.3 mm
+    b: 0.3 mm
+    fill: '#D6D6D6'
+  - id: '42'
+    l: 0.3 mm
+    r: 0.3 mm
+    t: 0.3 mm
+    b: 0.3 mm
+    fill: null
+  - id: '43'
+    l: 0.3 mm
+    r: 0.3 mm
+    t: 0.3 mm
+    b: 0.3 mm
+    fill: '#D6D6D6'
+  - id: '44'
+    l: 0.3 mm
+    r: 0.3 mm
+    t: 0.3 mm
+    b: 0.3 mm
+    fill: null
+  - id: '45'
+    l: 0.3 mm
+    r: 0.3 mm
+    t: 0.3 mm
+    b: 0.3 mm
+    fill: '#D6D6D6'
+  - id: '46'
+    l: 0.3 mm
+    r: 0.3 mm
+    t: 0.3 mm
+    b: 0.1 mm
+    fill: '#D4D4D4'
+  - id: '47'
+    l: 0.3 mm
+    r: 0.12 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: '#F2F2F2'
+  - id: '48'
+    l: 0.12 mm
+    r: 0.3 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: '#F2F2F2'
+  - id: '49'
+    l: 0.3 mm
+    r: 0.12 mm
+    t: 0.1 mm
+    b: 0.3 mm
+    fill: null
+  - id: '50'
+    l: 0.12 mm
+    r: 0.12 mm
+    t: 0.1 mm
+    b: 0.3 mm
+    fill: null
+  - id: '51'
+    l: 0.12 mm
+    r: 0.3 mm
+    t: 0.1 mm
+    b: 0.3 mm
+    fill: null
+  - id: '52'
+    l: 0.3 mm
+    r: 0.3 mm
+    t: 0.3 mm
+    b: 0.12 mm
+    fill: '#D4D4D4'
+  - id: '53'
+    l: 0.3 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.1 mm
+    fill: '#F2F2F2'
+  - id: '54'
+    l: 0.12 mm
+    r: 0.3 mm
+    t: 0.12 mm
+    b: 0.1 mm
+    fill: null
+  - id: '55'
+    l: 0.3 mm
+    r: 0.12 mm
+    t: 0.1 mm
+    b: 0.12 mm
+    fill: '#F2F2F2'
+  - id: '56'
+    l: 0.12 mm
+    r: 0.3 mm
+    t: 0.1 mm
+    b: 0.12 mm
+    fill: null
+  - id: '57'
+    l: 0.3 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: '#F2F2F2'
+  - id: '58'
+    l: 0.12 mm
+    r: 0.3 mm
+    t: 0.12 mm
+    b: 0.12 mm
+    fill: null
+  - id: '59'
+    l: 0.3 mm
+    r: 0.12 mm
+    t: 0.12 mm
+    b: 0.3 mm
+    fill: '#F2F2F2'
+  - id: '60'
+    l: 0.12 mm
+    r: 0.3 mm
+    t: 0.12 mm
+    b: 0.3 mm
+    fill: null
+  - id: '61'
+    l: 0.3 mm
+    r: 0.3 mm
+    t: 0.3 mm
+    b: 0.25 mm
+    fill: '#D4D4D4'
+  - id: '62'
+    l: 0.3 mm
+    r: 0.3 mm
+    t: 0.25 mm
+    b: 0.3 mm
+    fill: null
+  - id: '63'
+    l: 0.3 mm
+    r: 0.3 mm
+    t: 0.25 mm
+    b: 0.25 mm
+    fill: null
+  - id: '64'
+    l: 0.3 mm
+    r: 0.1 mm
+    t: 0.25 mm
+    b: 0.3 mm
+    fill: '#F2F2F2'
+  - id: '65'
+    l: 0.1 mm
+    r: 0.3 mm
+    t: 0.25 mm
+    b: 0.25 mm
+    fill: null
+  - id: '66'
+    l: 0.1 mm
+    r: 0.3 mm
+    t: 0.25 mm
+    b: 0.3 mm
+    fill: null
+  - id: '67'
+    l: 0.15 mm
+    r: 0.15 mm
+    t: 0.15 mm
+    b: 0.15 mm
+    fill: '#D9D9D9'
+  - id: '68'
+    l: 0.15 mm
+    r: 0.15 mm
+    t: 0.15 mm
+    b: 0.15 mm
+    fill: null
+  - id: '69'
+    l: 0.15 mm
+    r: 0.15 mm
+    t: 0.3 mm
+    b: 0.15 mm
+    fill: null
+  - id: '70'
+    l: 0.3 mm
+    r: 0.15 mm
+    t: 0.3 mm
+    b: 0.3 mm
+    fill: '#D6D6D6'
+  - id: '71'
+    l: 0.15 mm
+    r: 0.15 mm
+    t: 0.3 mm
+    b: 0.3 mm
+    fill: '#D6D6D6'
+  - id: '72'
+    l: 0.15 mm
+    r: 0.3 mm
+    t: 0.3 mm
+    b: 0.3 mm
+    fill: '#D6D6D6'
+  - id: '73'
+    l: 0.3 mm
+    r: 0.15 mm
+    t: 0.3 mm
+    b: 0.15 mm
+    fill: null
+  - id: '74'
+    l: 0.3 mm
+    r: 0.15 mm
+    t: 0.15 mm
+    b: 0.15 mm
+    fill: null
+  - id: '75'
+    l: 0.3 mm
+    r: 0.15 mm
+    t: 0.3 mm
+    b: 0.15 mm
+    fill: '#D6D6D6'
+  - id: '76'
+    l: 0.15 mm
+    r: 0.3 mm
+    t: 0.3 mm
+    b: 0.15 mm
+    fill: '#D6D6D6'
+  - id: '77'
+    l: 0.3 mm
+    r: 0.15 mm
+    t: 0.15 mm
+    b: 0.15 mm
+    fill: '#D6D6D6'
+  - id: '78'
+    l: 0.15 mm
+    r: 0.3 mm
+    t: 0.15 mm
+    b: 0.15 mm
+    fill: '#D6D6D6'
+  - id: '79'
+    l: 0.3 mm
+    r: 0.15 mm
+    t: 0.15 mm
+    b: 0.3 mm
+    fill: '#D6D6D6'
+  - id: '80'
+    l: 0.15 mm
+    r: 0.3 mm
+    t: 0.15 mm
+    b: 0.3 mm
+    fill: '#D6D6D6'
+  id_range:
+    min: 1
+    max: 80
+figure:
+  max_width: 48188
+  hwpunit_per_px96: 75
+  respect_png_dpi: false
+  caption:
+    side: BOTTOM
+    gap: 850
+    auto_num_type: PICTURE
+    prefix: '그림 '
+    role: figure_caption
+lineseg:
+  emit: true
+  baseline: floor(vertsize*0.85 + 0.5)
+  spacing: floor(charPr.height*(line_pct-100)/100 + 0.5)
+  flags:
+    normal: 393216
+    with_bullet: 2490368
+  note: half-up 반올림. 파이썬 round()는 banker's라 표/그림 앵커에서 틀린다.
+id_policy:
+  para_id_body: '0'
+  para_id_in_table: '2147483648'
+  shape_id_base: 2100000000
+  instid_base: 1030000000
+  step: 17
+  note: 난수 금지. 같은 입력이 같은 바이트를 내야 재현자료로 제출할 수 있다.
+writing_rules:
+  max_bullet_depth: 3
+  bullet_char_in_text: false
+  inline_cross_ref: false
+  inline_bold: true
+  style: 개조식
+  forbidden_char_prs:
+  - '3'
+  - '13'
+  - '16'
+  - '20'
+  - '26'
+  - '35'
+  - '36'
+  - '37'
+  - '38'
+  - '46'
+  - '47'
+  - '50'
+  - '51'
+  - '64'
+  - '66'
+  - '68'
+  - '77'
+  - '84'
+  - '85'
+  - '104'
+  - '118'
+  - '119'
+  - '120'
+  - '122'
+  - '123'
+  - '128'
+  - '130'
+  - '131'
+  - '132'
+  - '136'
+  - '137'
+  - '138'
+  - '141'
+  - '144'
+  - '145'
+  - '148'
+  - '150'
+  - '151'
+  - '152'
+  - '153'
+  - '154'
+  - '155'
+  - '156'
+  - '157'
+  - '158'
+  strip_from_template:
+  - markpen
+  - memo
+  - fieldBegin

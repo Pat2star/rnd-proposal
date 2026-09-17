@@ -1,0 +1,24 @@
+# 초임계 CO2 폐열 회수 열펌프 시스템 구성도 (workspace/agent-run FIG-1)
+# 시각 문법: 수치·상태점 번호·그룹박스·범례를 넣지 않는다.
+# 캡션은 HWPX가 hp:autoNum으로 붙이므로 그림 안에 넣지 않는다.
+preset: turbo
+canvas: hero          # 단일 패널 → 정사각 도면. AR 1.6 (게이트 3.6 기준)
+grid: [1, 1]
+dpi: 200
+
+panels:
+  - components:
+      - {id: comp, type: compressor, at: [0.17, 0.50], w: 0.16, h: 0.28, label: "압축기"}
+      - {id: mot,  type: motor,      at: [0.31, 0.50], r: 0.034, label: "M"}
+      - {id: exp,  type: expander,   at: [0.83, 0.50], w: 0.16, h: 0.28, label: "팽창기"}
+      - {id: gc,   type: hx,         at: [0.50, 0.80], w: 0.26, h: 0.13, label: "증기발생기"}
+      - {id: ev,   type: hx,         at: [0.50, 0.20], w: 0.26, h: 0.13, label: "폐열회수 열교환기"}
+    shafts:
+      - {from: comp, to: exp}
+    streams:
+      - {from: comp.top,   to: gc.left,     fluid: primary, route: VH}
+      - {from: gc.right,   to: exp.top,     fluid: primary, route: HV}
+      - {from: exp.bottom, to: ev.right,    fluid: primary, route: VH}
+      - {from: ev.left,    to: comp.bottom, fluid: primary, route: HV}
+      - {to: gc.top,    fluid: heat_sink,   direction: up,   length: 0.08, dx: -0.07, label: "공정 스팀"}
+      - {to: ev.bottom, fluid: heat_source, direction: down, length: 0.08, dx: -0.07, label: "공정 폐열", into: true}

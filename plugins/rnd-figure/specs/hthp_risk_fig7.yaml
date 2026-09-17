@@ -1,0 +1,25 @@
+# 위험요인 가능성-심각도 매트릭스 (workspace/hthp-2027 FIG-7)
+#
+# 출처: workspace/hthp-2027/sections/05_연구전략수행체계.md 5-1 위험요인별 대응전략 표
+#       (위험요인 6행의 「가능성/심각도」 열을 그대로 옮겼다)
+#
+# 대응전략은 그림에 넣지 않는다. 표에 이미 있고, 그림이 표를 복제하면
+# 둘 중 하나가 반드시 먼저 낡는다. 그림은 **분포**를 지고 표는 **내용**을 진다.
+kind: riskmatrix
+preset: turbo
+canvas: hero          # AR 1.6
+dpi: 200
+width_mm: 170
+
+area: {left: 0.025, right: 0.980, bottom: 0.030, top: 0.965}
+
+x_axis: {label: "가능성", ticks: ["저", "중", "상"]}
+y_axis: {label: "심각도", ticks: ["저", "중", "상"]}
+
+items:
+  - {x: 중, y: 상, label: "200℃급 성능시험 규격 부재"}
+  - {x: 중, y: 상, label: "실증 부지 열수요 변동"}
+  - {x: 중, y: 중, label: "압축기 고온 신뢰성 미달"}
+  - {x: 중, y: 중, label: "계측 불확도 과다"}
+  - {x: 저, y: 상, label: "작동유체 열안정성 미달"}
+  - {x: 저, y: 상, label: "고온·고압 시험 안전관리"}

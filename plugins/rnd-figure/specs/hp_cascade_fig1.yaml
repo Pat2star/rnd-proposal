@@ -1,0 +1,96 @@
+preset: turbo
+canvas: wide
+grid: [2, 2]
+dpi: 200
+# 캡션은 HWPX가 hp:autoNum으로 붙인다. 그림 안에 또 넣으면 이중이 된다.
+# 범례가 필요하면 legend 로 짧게.
+legend: "실선: 공기 작동유체   초록 실선: sCO2 작동유체"
+
+panels:
+  - title: "(a) Case 1: 단단 역브레이턴"
+    components:
+      - {id: comp, type: compressor, at: [0.17, 0.50], w: 0.15, h: 0.26, label: "Comp"}
+      - {id: exp,  type: expander,   at: [0.83, 0.50], w: 0.15, h: 0.26, label: "Exp"}
+      - {id: hhx,  type: hx,         at: [0.50, 0.84], w: 0.20, h: 0.11, label: "HHX"}
+      - {id: lhx,  type: hx,         at: [0.50, 0.16], w: 0.20, h: 0.11, label: "LHX"}
+    shafts:
+      - {from: comp, to: exp}
+    streams:
+      - {from: comp.top, to: hhx.left,  fluid: primary, route: VH}
+      - {from: hhx.right, to: exp.top,  fluid: primary, route: HV}
+      - {from: exp.bottom, to: lhx.right, fluid: primary, route: VH}
+      - {from: lhx.left, to: comp.bottom, fluid: primary, route: HV}
+      - {to: hhx.top,    fluid: heat_sink,   direction: up,   length: 0.09, dx: -0.06, label: "Heat sink"}
+      - {to: lhx.bottom, fluid: heat_source, direction: down, length: 0.09, dx: -0.06, label: "Heat source"}
+
+  - title: "(b) Case 2: 캐스케이드 공기-공기"
+    components:
+      - {id: ct,  type: compressor, at: [0.17, 0.74], w: 0.14, h: 0.20, label: "Comp_t"}
+      - {id: et,  type: expander,   at: [0.83, 0.74], w: 0.14, h: 0.20, label: "Exp_t"}
+      - {id: hhx, type: hx,         at: [0.50, 0.88], w: 0.18, h: 0.075, label: "HHX"}
+      - {id: ihx, type: hx,         at: [0.50, 0.50], w: 0.18, h: 0.08, label: "IHX"}
+      - {id: cb,  type: compressor, at: [0.17, 0.27], w: 0.14, h: 0.20, label: "Comp_b"}
+      - {id: eb,  type: expander,   at: [0.83, 0.27], w: 0.14, h: 0.20, label: "Exp_b"}
+      - {id: lhx, type: hx,         at: [0.50, 0.12], w: 0.18, h: 0.075, label: "LHX"}
+    shafts:
+      - {from: ct, to: et}
+      - {from: cb, to: eb}
+    streams:
+      - {from: ct.top, to: hhx.left, fluid: primary, route: VH}
+      - {from: hhx.right, to: et.top, fluid: primary, route: HV}
+      - {from: et.bottom, to: ihx.right, fluid: primary, route: VH}
+      - {from: ihx.left, to: ct.bottom, fluid: primary, route: HV}
+      - {from: cb.top, to: ihx.left, fluid: secondary, route: VH}
+      - {from: ihx.right, to: eb.top, fluid: secondary, route: HV}
+      - {from: eb.bottom, to: lhx.right, fluid: secondary, route: VH}
+      - {from: lhx.left, to: cb.bottom, fluid: secondary, route: HV}
+      - {to: hhx.top,    fluid: heat_sink,   direction: up,   length: 0.06, dx: -0.055, label: "Heat sink"}
+      - {to: lhx.bottom, fluid: heat_source, direction: down, length: 0.06, dx: -0.055, label: "Heat source"}
+
+  - title: "(c) Case 3: 캐스케이드 공기-sCO2 (팽창기)"
+    components:
+      - {id: ct,  type: compressor, at: [0.17, 0.74], w: 0.14, h: 0.20, label: "Comp_t"}
+      - {id: et,  type: expander,   at: [0.83, 0.74], w: 0.14, h: 0.20, label: "Exp_t"}
+      - {id: hhx, type: hx,         at: [0.50, 0.88], w: 0.18, h: 0.075, label: "HHX"}
+      - {id: ihx, type: hx,         at: [0.50, 0.50], w: 0.18, h: 0.08, label: "IHX"}
+      - {id: cb,  type: compressor, at: [0.17, 0.27], w: 0.14, h: 0.20, label: "Comp_b"}
+      - {id: eb,  type: expander,   at: [0.83, 0.27], w: 0.14, h: 0.20, label: "Exp_b"}
+      - {id: lhx, type: hx,         at: [0.50, 0.12], w: 0.18, h: 0.075, label: "LHX"}
+    shafts:
+      - {from: ct, to: et}
+      - {from: cb, to: eb}
+    streams:
+      - {from: ct.top, to: hhx.left, fluid: primary, route: VH}
+      - {from: hhx.right, to: et.top, fluid: primary, route: HV}
+      - {from: et.bottom, to: ihx.right, fluid: primary, route: VH}
+      - {from: ihx.left, to: ct.bottom, fluid: primary, route: HV}
+      - {from: cb.top, to: ihx.left, fluid: secondary, route: VH}
+      - {from: ihx.right, to: eb.top, fluid: secondary, route: HV}
+      - {from: eb.bottom, to: lhx.right, fluid: secondary, route: VH}
+      - {from: lhx.left, to: cb.bottom, fluid: secondary, route: HV}
+      - {to: hhx.top,    fluid: heat_sink,   direction: up,   length: 0.06, dx: -0.055, label: "Heat sink"}
+      - {to: lhx.bottom, fluid: heat_source, direction: down, length: 0.06, dx: -0.055, label: "Heat source"}
+
+  - title: "(d) Case 4: 캐스케이드 공기-sCO2 (밸브)"
+    components:
+      - {id: ct,  type: compressor, at: [0.17, 0.74], w: 0.14, h: 0.20, label: "Comp_t"}
+      - {id: et,  type: expander,   at: [0.83, 0.74], w: 0.14, h: 0.20, label: "Exp_t"}
+      - {id: hhx, type: hx,         at: [0.50, 0.88], w: 0.18, h: 0.075, label: "HHX"}
+      - {id: ihx, type: hx,         at: [0.50, 0.50], w: 0.18, h: 0.08, label: "IHX"}
+      - {id: cb,  type: compressor, at: [0.17, 0.27], w: 0.14, h: 0.20, label: "Comp_b"}
+      - {id: mot, type: motor,      at: [0.285, 0.27], r: 0.026, label: "M"}
+      - {id: vlv, type: valve,      at: [0.83, 0.27], size: 0.08, label: "VLV"}
+      - {id: lhx, type: hx,         at: [0.50, 0.12], w: 0.18, h: 0.075, label: "LHX"}
+    shafts:
+      - {from: ct, to: et}
+    streams:
+      - {from: ct.top, to: hhx.left, fluid: primary, route: VH}
+      - {from: hhx.right, to: et.top, fluid: primary, route: HV}
+      - {from: et.bottom, to: ihx.right, fluid: primary, route: VH}
+      - {from: ihx.left, to: ct.bottom, fluid: primary, route: HV}
+      - {from: cb.top, to: ihx.left, fluid: secondary, route: VH}
+      - {from: ihx.right, to: vlv.top, fluid: secondary, route: HV}
+      - {from: vlv.bottom, to: lhx.right, fluid: secondary, route: VH}
+      - {from: lhx.left, to: cb.bottom, fluid: secondary, route: HV}
+      - {to: hhx.top,    fluid: heat_sink,   direction: up,   length: 0.06, dx: -0.055, label: "Heat sink"}
+      - {to: lhx.bottom, fluid: heat_source, direction: down, length: 0.06, dx: -0.055, label: "Heat source"}

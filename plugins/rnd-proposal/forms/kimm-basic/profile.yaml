@@ -1,0 +1,363 @@
+profile_version: 1
+form:
+  id: kimm-basic
+  template: template.hwpx
+  template_sha256: fa84bb40a7db4d9012ce59a6c097bbcac02915807c96f65553c26483b14bc849
+  extracted_at: '2026-08-18'
+  extractor_version: 0.1.0
+page:
+  width: 59528
+  height: 84186
+  margin:
+    left: 8504
+    right: 8504
+    top: 5668
+    bottom: 4252
+    header: 4252
+    footer: 4252
+  text_width_computed: 42520
+  text_width_observed: 42520
+  text_width: 42520
+  hwpunit_per_mm: 283.465
+  hwpunit_per_px96: 75
+section_prologue:
+  raw_file: prologue_run.xml
+  first_para_attrs:
+    paraPrIDRef: '0'
+    styleIDRef: '0'
+    pageBreak: '0'
+    columnBreak: '0'
+    merged: '0'
+  note: secPr은 첫 문단 첫 run 안에 있다. 파싱하지 말고 원문을 그대로 삽입한다.
+roles:
+  figure_anchor:
+    para: '4'
+    char: '1'
+    style: '0'
+    confidence: medium
+    evidence: hp:pic을 직접 담은 문단 (텍스트 run이 없어 첫 run charPr로 폴백)
+    warning: paraPr 4는 heading=OUTLINE이라 한글이 개요 번호를 자동으로 붙인다. BULLET 또는 NONE 문단모양이 안전하다.
+    review_question: figure_anchor에 OUTLINE 문단모양 4를 쓰면 개요 번호가 자동으로 붙습니다. 그래도 이걸 쓰시겠습니까?
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 3000
+    intent: 0
+    char_height: 1000
+    font: 함초롬돋움
+    bold: false
+  bullet_level_0:
+    para: '4'
+    char: '1'
+    style: null
+    confidence: medium
+    evidence: heading.type=OUTLINE, margin.left=3000 (본문 사용 2회) → 오름차순 0번째. 본문 미사용 BULLET paraPr ['2',
+      '3', '5', '6', '7', '8'] 제외함
+    warning: paraPr 4는 heading=OUTLINE이라 한글이 개요 번호를 자동으로 붙인다. BULLET 또는 NONE 문단모양이 안전하다.
+    review_question: bullet_level_0에 OUTLINE 문단모양 4를 쓰면 개요 번호가 자동으로 붙습니다. 그래도 이걸 쓰시겠습니까?
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 3000
+    intent: 0
+    char_height: 1000
+    font: 함초롬돋움
+    bold: false
+    bullet_char: null
+    heading:
+      type: OUTLINE
+      id_ref: '0'
+      level: 2
+  body:
+    para: '0'
+    char: '0'
+    style: '0'
+    confidence: medium
+    evidence: 제목/글머리/앵커로 배정되지 않은 평문단 중 최빈 (heading=NONE, indent=0, intent=0)
+    samples:
+    - AI Agent 기반 연구계획서 자동 작성 시스
+    - 1. 연구 개요
+    - 본 연구는 AI Agent 협업을 통해 연구계획
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 0
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  heading_1:
+    para: '2'
+    char: '0'
+    style: '2'
+    confidence: low
+    evidence: 본문에 이 역할의 사례가 없다. 표준 스타일 '개요 1'(engName=Outline 1, id=2)의 문단모양 2 / 글자모양 0을 후보로 제안한다
+    warning: 'heading_1: 관측 사례 없음 → 스타일 이름으로 추정'
+    review_question: heading_1을 표준 스타일 '개요 1'(paraPr 2 / charPr 0)로 잡았습니다. 본문에 이 역할의 사례가 없다라 관측으로는 확인할
+      수 없었습니다. 맞습니까?
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 1000
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  heading_2:
+    para: '3'
+    char: '0'
+    style: '3'
+    confidence: low
+    evidence: 본문에 이 역할의 사례가 없다. 표준 스타일 '개요 2'(engName=Outline 2, id=3)의 문단모양 3 / 글자모양 0을 후보로 제안한다
+    warning: 'heading_2: 관측 사례 없음 → 스타일 이름으로 추정'
+    review_question: heading_2을 표준 스타일 '개요 2'(paraPr 3 / charPr 0)로 잡았습니다. 본문에 이 역할의 사례가 없다라 관측으로는 확인할
+      수 없었습니다. 맞습니까?
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 2000
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  heading_3:
+    para: '4'
+    char: '0'
+    style: '4'
+    confidence: low
+    evidence: 본문에 이 역할의 사례가 없다. 표준 스타일 '개요 3'(engName=Outline 3, id=4)의 문단모양 4 / 글자모양 0을 후보로 제안한다
+    warning: 'heading_3: 관측 사례 없음 → 스타일 이름으로 추정'
+    review_question: heading_3을 표준 스타일 '개요 3'(paraPr 4 / charPr 0)로 잡았습니다. 본문에 이 역할의 사례가 없다라 관측으로는 확인할
+      수 없었습니다. 맞습니까?
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 3000
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  bullet_level_1:
+    para: '6'
+    char: '0'
+    style: '6'
+    confidence: low
+    evidence: 본문에 이 역할의 사례가 없다. 표준 스타일 '개요 5'(engName=Outline 5, id=6)의 문단모양 6 / 글자모양 0을 후보로 제안한다
+    warning: 'bullet_level_1: 관측 사례 없음 → 스타일 이름으로 추정 / paraPr 6는 heading=OUTLINE이라 한글이 개요 번호를 자동으로 붙인다.
+      BULLET 또는 NONE 문단모양이 안전하다.'
+    review_question: bullet_level_1을 표준 스타일 '개요 5'(paraPr 6 / charPr 0)로 잡았습니다. 본문에 이 역할의 사례가 없다라 관측으로는
+      확인할 수 없었습니다. 맞습니까?
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 5000
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  bullet_level_2:
+    para: '7'
+    char: '0'
+    style: '7'
+    confidence: low
+    evidence: 본문에 이 역할의 사례가 없다. 표준 스타일 '개요 6'(engName=Outline 6, id=7)의 문단모양 7 / 글자모양 0을 후보로 제안한다
+    warning: 'bullet_level_2: 관측 사례 없음 → 스타일 이름으로 추정 / paraPr 7는 heading=OUTLINE이라 한글이 개요 번호를 자동으로 붙인다.
+      BULLET 또는 NONE 문단모양이 안전하다.'
+    review_question: bullet_level_2을 표준 스타일 '개요 6'(paraPr 7 / charPr 0)로 잡았습니다. 본문에 이 역할의 사례가 없다라 관측으로는
+      확인할 수 없었습니다. 맞습니까?
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 6000
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  table_header:
+    para: '0'
+    char: '0'
+    style: '0'
+    confidence: low
+    evidence: 이 양식에는 표 사례가 없다. 표준 스타일 '바탕글'(engName=Normal, id=0)의 문단모양 0 / 글자모양 0을 후보로 제안한다
+    warning: 'table_header: 관측 사례 없음 → 스타일 이름으로 추정'
+    review_question: table_header을 표준 스타일 '바탕글'(paraPr 0 / charPr 0)로 잡았습니다. 이 양식에는 표 사례가 없다라 관측으로는 확인할
+      수 없었습니다. 맞습니까?
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 0
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  table_cell:
+    para: '0'
+    char: '0'
+    style: '0'
+    confidence: low
+    evidence: 이 양식에는 표 사례가 없다. 표준 스타일 '바탕글'(engName=Normal, id=0)의 문단모양 0 / 글자모양 0을 후보로 제안한다
+    warning: 'table_cell: 관측 사례 없음 → 스타일 이름으로 추정'
+    review_question: table_cell을 표준 스타일 '바탕글'(paraPr 0 / charPr 0)로 잡았습니다. 이 양식에는 표 사례가 없다라 관측으로는 확인할
+      수 없었습니다. 맞습니까?
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 0
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  figure_caption:
+    para: '0'
+    char: '0'
+    style: '0'
+    confidence: low
+    evidence: 이 양식에는 그림 캡션 사례가 없다. 표준 스타일 '바탕글'(engName=Normal, id=0)의 문단모양 0 / 글자모양 0을 후보로 제안한다
+    warning: 'figure_caption: 관측 사례 없음 → 스타일 이름으로 추정'
+    review_question: figure_caption을 표준 스타일 '바탕글'(paraPr 0 / charPr 0)로 잡았습니다. 이 양식에는 그림 캡션 사례가 없다라 관측으로는
+      확인할 수 없었습니다. 맞습니까?
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 0
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  bullet_level_3:
+    para: '7'
+    char: '0'
+    style: '7'
+    confidence: none
+    evidence: 양식에 대응 서식이 없어 'bullet_level_2' 설정을 전용함
+    warning: bullet_level_3 미검출 → bullet_level_2 폴백 / paraPr 7는 heading=OUTLINE이라 한글이 개요 번호를 자동으로 붙인다.
+      BULLET 또는 NONE 문단모양이 안전하다.
+    fallback_of: bullet_level_2
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 6000
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  table_anchor:
+    para: '0'
+    char: '0'
+    style: '0'
+    confidence: none
+    evidence: 양식에 대응 서식이 없어 'body' 설정을 전용함
+    warning: table_anchor 미검출 → body 폴백
+    fallback_of: body
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 0
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  table_caption:
+    para: '0'
+    char: '0'
+    style: '0'
+    confidence: none
+    evidence: 양식에 대응 서식이 없어 'figure_caption' 설정을 전용함
+    warning: table_caption 미검출 → figure_caption 폴백
+    fallback_of: figure_caption
+    align: JUSTIFY
+    line_spacing_pct: 160
+    indent_left: 0
+    intent: 0
+    char_height: 1000
+    font: 함초롬바탕
+    bold: false
+  bold:
+    para: null
+    char: '30'
+    style: null
+    confidence: medium
+    evidence: 본문 높이(1000)와 같은 bold charPr ['30', '32'] 발견
+    char_height: 1000
+    font: 함초롬돋움
+    bold: true
+    policy: apply
+numbering:
+  outline_ids:
+  - '1'
+  levels:
+  - ^1.
+  - ^2.
+  - ^3)
+  - ^4)
+  - (^5)
+  - (^6)
+  - ^7
+  - ^8
+  - ''
+  - ''
+bullets: {}
+table:
+  style_source: 표준 기본값 (이 양식에 표 사례 없음)
+  tbl_border_fill: '1'
+  cell_spacing: 0
+  page_break: CELL
+  repeat_header: 1
+  width_budget: 42520
+  in_margin:
+    left: 510
+    right: 510
+    top: 141
+    bottom: 141
+  cell_margin:
+    left: 600
+    right: 600
+    top: 400
+    bottom: 400
+  default_row_height: 1386
+  stub_cols: 0
+  zone_rules:
+    outer: 0.3 mm
+    inner: 0.15 mm
+    header_fill: '#D6D6D6'
+    note: stub 없는 단순 표 전용. 원본 표는 재현하지 않는다. 양식에 이 조합이 없으면 가진 것 중 가장 가까운 borderFill로 근사한다.
+  borderfill_index:
+  - id: '1'
+    l: 0.1 mm
+    r: 0.1 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: null
+  - id: '2'
+    l: 0.1 mm
+    r: 0.1 mm
+    t: 0.1 mm
+    b: 0.1 mm
+    fill: null
+  id_range:
+    min: 1
+    max: 2
+figure:
+  max_width: 42520
+  hwpunit_per_px96: 75
+  respect_png_dpi: false
+  caption:
+    side: BOTTOM
+    gap: 850
+    auto_num_type: PICTURE
+    prefix: '그림 '
+    role: figure_caption
+lineseg:
+  emit: true
+  baseline: floor(vertsize*0.85 + 0.5)
+  spacing: floor(charPr.height*(line_pct-100)/100 + 0.5)
+  flags:
+    normal: 393216
+    with_bullet: 2490368
+  note: half-up 반올림. 파이썬 round()는 banker's라 표/그림 앵커에서 틀린다.
+id_policy:
+  para_id_body: '0'
+  para_id_in_table: '2147483648'
+  shape_id_base: 2100000000
+  instid_base: 1030000000
+  step: 17
+  note: 난수 금지. 같은 입력이 같은 바이트를 내야 재현자료로 제출할 수 있다.
+writing_rules:
+  max_bullet_depth: 3
+  bullet_char_in_text: false
+  inline_cross_ref: false
+  inline_bold: true
+  style: 개조식
+  forbidden_char_prs:
+  - '5'
+  strip_from_template:
+  - markpen
+  - memo
+  - fieldBegin

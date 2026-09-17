@@ -1,0 +1,39 @@
+# 고온 히트펌프-MVR 연계 시스템 구성 (workspace/hthp-2027 FIG-4)
+#
+# 사이클 그림이므로 개괄도 엔진으로 그린다 — 위상이 곧 연구 내용이다.
+# 시각 문법: 수치·상태점 번호·그룹박스·범례를 넣지 않는다.
+# 캡션은 HWPX가 hp:autoNum으로 붙이므로 그림 안에 넣지 않는다.
+#
+# 구성
+#   냉매 루프(검정 실선) : 압축기 → 응축기 → 팽창밸브 → 증발기 → 압축기
+#   증기 계통(초록 실선) : 응축기에서 만든 증기를 MVR 압축기가 승온해 공급
+#   공정 폐열(빨간 점선) : 증발기로 **들어온다** (into: true)
+#   공정 스팀(파란 점선) : MVR 출구에서 나간다
+preset: turbo
+canvas: hero          # 단일 패널. AR 1.6 (게이트 3.6 기준)
+grid: [1, 1]
+dpi: 200
+
+panels:
+  - components:
+      - {id: mot,  type: motor,      at: [0.05, 0.44], r: 0.030, label: "M"}
+      - {id: comp, type: compressor, at: [0.20, 0.44], w: 0.15, h: 0.26, label: "압축기"}
+      - {id: cond, type: hx,         at: [0.44, 0.72], w: 0.24, h: 0.12, label: "응축기"}
+      - {id: vlv,  type: valve,      at: [0.68, 0.44], size: 0.075,      label: "팽창밸브"}
+      - {id: evap, type: hx,         at: [0.44, 0.14], w: 0.24, h: 0.12, label: "증발기"}
+      - {id: mvr,  type: compressor, at: [0.88, 0.78], w: 0.13, h: 0.20, label: "MVR 압축기"}
+    shafts:
+      - {from: mot, to: comp}
+    streams:
+      # 냉매 루프
+      - {from: comp.top,    to: cond.left,   fluid: primary, route: VH}
+      - {from: cond.right,  to: vlv.top,     fluid: primary, route: HV}
+      - {from: vlv.bottom,  to: evap.right,  fluid: primary, route: VH}
+      - {from: evap.left,   to: comp.bottom, fluid: primary, route: HV}
+      # 증기 계통 — 응축기에서 생성한 증기를 MVR이 승온
+      # ★ HV로 둔다. VH를 쓰면 냉매 배관(응축기 중심 높이)과 같은 y에 겹쳐 그려진다.
+      #   HV는 응축기 윗변 높이(중심+h/2)로 수평 주행해 검정 배관과 분리된다.
+      - {from: cond.top,    to: mvr.left,    fluid: secondary, route: HV}
+      # 외부 열류
+      - {to: evap.bottom, fluid: heat_source, direction: down, length: 0.09, dx: -0.07, label: "공정 폐열", into: true}
+      - {to: mvr.top,     fluid: heat_sink,   direction: up,   length: 0.07, dx: 0.0,   label: "공정 스팀", label_side: right}

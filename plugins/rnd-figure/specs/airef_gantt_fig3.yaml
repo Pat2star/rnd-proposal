@@ -1,0 +1,50 @@
+# AI 물질발굴 기반 냉매 개발 — 연차별 추진 일정(간트)
+#
+# 격자형이므로 lattice 엔진(경로 C)으로 그린다.
+# 출처: workspace/ai-refrigerant/_ws/10_project_title.md (2026.04~2029.12, 1단계 33개월)
+#       최종목표 4축: 탐색·스크리닝 / 합성·정제 / 열물성·EOS / 시스템 적용성
+#
+# 눈금 k = k차년도 시작. span [1, 2] = 1차년도 한 해.
+kind: gantt
+preset: turbo
+canvas: wide
+dpi: 200
+width_mm: 170
+
+area: {left: 0.020, right: 0.980, bottom: 0.070, top: 0.965}
+label_width: 0.260
+header_h: 0.120
+phase_h: 0.072
+bar_h: 0.600
+
+corner: "세부 추진과제"
+columns:      ["1차(2026)", "2차(2027)", "3차(2028)", "4차(2029)"]
+column_notes: ["TRL 3",     "TRL 4",     "TRL 5",     "TRL 6"]
+
+phases:
+  - {span: [1, 4], label: "1단계 — 후보 도출·합성·물성"}
+  - {span: [4, 5], label: "2단계 — 시스템 적용성 검증"}
+
+rows:
+  - label: "AI 신냉매 탐색·스크리닝"
+    bars: [{span: [1, 2.5], style: phase1, label: "생성 모델·후보군 도출"}]
+
+  - label: "합성·정제 공정 개발"
+    bars: [{span: [1.5, 3.5], style: phase1, label: "랩 스케일 100 g/day"}]
+
+  - label: "열물성 측정·EOS 모델"
+    bars: [{span: [2, 4], style: phase1, label: "측정불확도·REFPROP 적용"}]
+
+  - label: "무독성·열안정성 평가"
+    bars: [{span: [2, 3.8], style: phase1, label: "독성·분해생성물"}]
+
+  - label: "히트펌프 적용성 검증"
+    bars: [{span: [3.2, 5], style: phase2, label: "오일 적합성·ATW 장기운전"}]
+
+  - label: "성과 정리·기술이전"
+    bars: [{span: [4.4, 5], style: phase2, label: "설계자료·이전"}]
+
+milestones:
+  - {at: 2.5, label: "후보 물질 확정"}
+  - {at: 4.0, label: "1단계 종료 평가"}
+  - {at: 5.0, label: "1,000시간 운전"}

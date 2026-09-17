@@ -1,0 +1,60 @@
+# 기관 간 협력 수행체계 — 조직도 (workspace/hthp-2027 FIG-5)
+#
+# 격자형 그림이므로 lattice 엔진으로 그린다.
+#   · 사이클이 아니다 → 개괄도 엔진의 글리프 어휘 밖이다
+#   · 라벨이 곧 내용이다 → Gemini 로는 기관명을 정확히 못 넣는다
+#
+# 출처: workspace/hthp-2027/sections/05_연구전략수행체계.md 5-2 기관별 담당 영역 표
+# 캡션은 HWPX 가 hp:autoNum 으로 붙이므로 그림 안에 넣지 않는다.
+kind: orgchart
+preset: turbo
+canvas: wide          # AR 1.778
+dpi: 200
+width_mm: 170
+
+area: {left: 0.020, right: 0.980}
+
+tiers:
+  # 총괄
+  - y: 0.893
+    nodes:
+      - {id: pm, label: "총괄연구책임자\n(한국기계연구원)", role: lead, w: 0.300, h: 0.140}
+
+  # 수행 주체 4기관
+  - y: 0.610
+    h: 0.150
+    gap: 0.170
+    nodes:
+      - {id: kimm, label: "한국기계연구원", body: "주관", role: lead}
+      - {id: kier, label: "한국에너지기술연구원", body: "공동", role: joint}
+      - {id: firm, label: "터보기기 제작기업", body: "공동", role: joint}
+      - {id: univ, label: "국내 대학", body: "위탁", role: entrust}
+
+  # 담당 연구영역
+  - y: 0.245
+    h: 0.300
+    gap: 0.170
+    nodes:
+      - {id: r_kimm, label: "요소기기·통합 총괄", body: "터보 압축기·MVR 블로워 설계\n단품 성능시험\n통합 시스템 제작 총괄", role: plain}
+      - {id: r_kier, label: "사이클·축열·평가", body: "사이클 해석·설계기준 수립\n고온 축열 결합 운전 전략\n시스템 성능평가", role: plain}
+      - {id: r_firm, label: "제작·실증 운영", body: "시작품·통합 시스템 제작\n실증 부지 운영\n현장 운전 지원", role: plain}
+      - {id: r_univ, label: "작동유체 기초시험", body: "저GWP 자연냉매 열안정성\n재료 적합성 기초시험", role: plain}
+
+# 부속 상자 — 자유 배치
+nodes:
+  - {id: ops,  label: "연구운영위원회", body: "월 1회 기술회의\n분기 1회 성과점검", role: group,
+     at: [0.115, 0.893], w: 0.205, h: 0.170}
+  - {id: coop, label: "협력기관", body: "공인시험기관\n안전·인증 전문기관", role: partner,
+     at: [0.885, 0.893], w: 0.205, h: 0.170}
+
+edges:
+  - {from: ops,  to: pm, route: H, style: dashed}
+  - {from: pm,   to: coop, route: H, style: dashed}
+  - {from: pm,   to: kimm, mid: 0.735}
+  - {from: pm,   to: kier, mid: 0.735}
+  - {from: pm,   to: firm, mid: 0.735}
+  - {from: pm,   to: univ, mid: 0.735}
+  - {from: kimm, to: r_kimm, route: V}
+  - {from: kier, to: r_kier, route: V}
+  - {from: firm, to: r_firm, route: V}
+  - {from: univ, to: r_univ, route: V}

@@ -1,0 +1,10 @@
+{
+  "name": "rnd-figure",
+  "description": "연구계획서 그림. 사이클 개괄도는 코드로 그리고(위상이 곧 연구 내용이라 AI 가 연결을 틀린다), 조직도·진도표·매트릭스·기대효과는 Gemini 또는 ChatGPT 로 받아온다. 재현·인쇄 품질이 걸리면 격자 엔진(3200×1800 · 겹침 검사)으로 돌린다. 「그림 넣어줘」 「개요도」 「조직도」 요청 시 트리거.",
+  "version": "0.1.1",
+  "license": "MIT",
+  "author": {
+    "name": "Hyerim",
+    "email": "star2khr@gmail.com"
+  }
+}

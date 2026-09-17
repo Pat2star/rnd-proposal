@@ -1,0 +1,10 @@
+# AI 경진대회 — 연구계획서 생성 Agent 시스템
+lxml>=5.0
+PyYAML>=6.0
+Pillow>=10.0
+matplotlib>=3.8
+pytest>=8.0
+# 선택: HTML 그림 엔진(14종 템플릿)
+playwright>=1.40
+# 선택(Windows): 한컴 실렌더 검증 L5
+pywin32>=306 ; sys_platform == "win32"
