@@ -40,6 +40,18 @@ PYTHONPATH="$CLAUDE_PLUGIN_ROOT" python -m engine.hwpx.extract_form <양식.hwpx
    PYTHONPATH="$CLAUDE_PLUGIN_ROOT" python -m engine.quality.gate --stage S1 --form forms/<id>
    ```
 
+# 첫머리(표지·개요표) — 판정 결과를 사람에게 보여 준다 (2026-09-17)
+
+추출이 끝나면 반드시 돌려서 결과를 사용자에게 보여 준다.
+
+```bash
+PYTHONPATH="$CLAUDE_PLUGIN_ROOT" python -m engine.hwpx.overview_fill --form forms/<id>
+```
+
+라벨 칸을 **음영**으로 찾는다. 틀리게 잡았으면(라벨이 값으로, 안내 상자가 개요로)
+`forms/<id>/overview_fill.yaml` 을 써서 덮는다 — 사람이 쓴 명세가 이긴다.
+「첫머리에 채울 표가 없다」가 나오면 그 양식은 개요를 원고 표로 짓는다(정상).
+
 # 본문 줄간격 — 규정이 있을 때만 바꾼다 (2026-09-17 사용자 규칙)
 
 > **공고문·작성요령에 본문 줄간격 규정이 있으면 따르고, 없으면 양식을 유지한다.**

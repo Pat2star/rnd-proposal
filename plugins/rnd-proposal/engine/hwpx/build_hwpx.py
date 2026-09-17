@@ -200,30 +200,53 @@ def build(form_dir: str, md_path: str, out_path: str,
     # 값 칸만 채운다. 원고의 「개요」 구간은 표로 옮겼으니 본문에서 뺀다.
     # 원본 첫 문단이 구역 설정(secPr)을 이미 품고 있으므로 prologue 는 다시 붙이지 않는다.
     from . import overview_fill
-    ofs = overview_fill.load_spec(form_dir)
+    ofs = overview_fill.resolve_spec(form_dir, prof.template)
     if ofs:
-        head = ofs.get("section_heading", "개요")
-        sect, rest, inside = [], [], False
+        head = ofs.get("section_heading")
+
+        def is_overview_heading(b):
+            t = b.text.strip()
+            if head:
+                return t.startswith(head)
+            m = overview_fill.NUM_HEADING.match(t)
+            return not m or m.group(1) == "0"        # 번호 없는 제목 · 「0. 요약문」
+
+        sect, rest, inside, seen_body = [], [], False, False
+        doc_title = None
         for b in blocks:
-            if b.kind == "heading" and b.level == 1:
+            if b.kind == "heading" and b.level == 1 and not seen_body:
+                if is_overview_heading(b):
+                    if doc_title is None and not b.text.strip().startswith(("개요", "0")):
+                        doc_title = b.text.strip()
+                    inside = True
+                    continue
+                inside, seen_body = False, True
+            elif b.kind == "heading" and b.level == 1 and head:
                 inside = b.text.strip().startswith(head)
                 if inside:
                     continue
             (sect if inside else rest).append(b)
-        # 문서 제목(# 과제명)이 개요 앞에 1수준으로 있으면 표지 상자가 대신한다
-        rest = [b for b in rest
-                if not (b.kind == "heading" and b.level == 1 and rest.index(b) == 0
-                        and not re.match(r"^\s*\d+[\.\s]", b.text))]
-        values, budget, owarn, leftover = overview_fill.collect(sect, ofs)
-        front, fwarn = overview_fill.front_paragraphs(prof.template, ofs, values, budget)
-        warnings.extend(owarn + fwarn)
-        if not values:
-            errors.append(f"원고에 「{head}」 구간이 없거나 비어 있다 — 개요표를 채울 값이 없다")
-        children.extend(front)
-        # 양식에 자리가 없는 표·글은 개요표 바로 뒤에 원고 그대로 싣는다(버리지 않는다)
-        blocks = leftover + rest
-        prologue = ""
-        first = False
+        values, budget, owarn, leftover, nmatch = overview_fill.collect(sect, ofs)
+        if doc_title and doc_title != head:
+            values.setdefault("__제목__", [doc_title])
+        auto = ofs.get("source") == "auto"
+        if auto and nmatch < overview_fill.MIN_MATCH_AUTO:
+            # 원고가 양식 개요와 맞지 않는다 — 엉뚱한 칸에 넣느니 예전 방식으로 짓는다
+            warnings.append(f"양식 첫머리를 자동으로 채우지 못했다(원고 개요와 맞은 항목 {nmatch}개 "
+                            f"< {overview_fill.MIN_MATCH_AUTO}) — 원고 표를 새로 지었다")
+        else:
+            front, fwarn = overview_fill.front_paragraphs(prof.template, ofs, values, budget)
+            warnings.extend(owarn + fwarn)
+            if not values:
+                errors.append("원고에 개요 구간이 없거나 비어 있다 — 개요표를 채울 값이 없다")
+            children.extend(front)
+            # 양식에 자리가 없는 표·글은 개요표 바로 뒤에 원고 그대로 싣는다(버리지 않는다)
+            blocks = leftover + rest
+            prologue = ""
+            first = False
+            if front and not any("secPr" in x for x in front):
+                # 첫 문단(구역 설정)을 싣지 않았다면 첫 표 문단 앞에 prologue 를 붙여야 한다
+                errors.append("양식 첫 문단(구역 설정)이 첫머리에 없다 — 명세의 front_keep 을 확인하라")
 
     # ── 개요 구간 전용 서식 ────────────────────────────────────────────
     # ★ 실측(2026-08-26): 이 양식은 개요에 **자기만의 서식 규칙**을 명시한다.

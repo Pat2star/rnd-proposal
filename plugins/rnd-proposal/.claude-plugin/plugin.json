@@ -1,7 +1,7 @@
 {
   "name": "rnd-proposal",
   "description": "부처 연구계획서 양식(.hwpx)을 넣으면 코드 수정 없이 그 양식에 맞춰 조립한다. 서식(header.xml)은 sha256 바이트 동일로 보존하고, 분량은 한컴 COM 으로 실측하며, 골격·표현·수치 출처를 검사기가 센다. 「이 양식으로 만들어줘」 「양식 그대로」 「서식 안 무너지게」 「HWPX 로 조립」 「쪽수 맞춰줘」 「분량 맞춰줘」 요청 시 트리거. 조사·평가위원단은 rfp-proposal-harness 가 맡는다.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "author": {
     "name": "Hyerim",

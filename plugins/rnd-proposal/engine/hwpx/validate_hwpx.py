@@ -170,11 +170,10 @@ def _native_front(section, prof):
     if prof is None:
         return set(), set()
     from . import overview_fill
-    spec = overview_fill.load_spec(prof.dir)
+    spec = overview_fill.resolve_spec(prof.dir, prof.template)
     if not spec:
         return set(), set()
-    n = int(spec["front_paragraphs"])
-    tops = [p for p in section if p.tag == "{%s}p" % NS['hp']][:n]
+    n = len(spec["front_keep"])
     with zipfile.ZipFile(prof.template) as z:
         hdr = z.read("Contents/header.xml").decode("utf-8")
         src = z.read("Contents/section0.xml").decode("utf-8")
@@ -184,7 +183,16 @@ def _native_front(section, prof):
     for c in colors:
         draft |= set(re.findall(rf'<hh:charPr id="(\d+)"[^>]*textColor="{re.escape(c)}"', hdr))
     from .vendor import zip_surgery
-    kids = zip_surgery.extract_children(zip_surgery.parse_section(src.encode()).body)[:n]
+    allk = zip_surgery.extract_children(zip_surgery.parse_section(src.encode()).body)
+    kids = [allk[i] for i in spec["front_keep"]]
+    # 실제로 원본을 실었을 때만 뺀다 — 원본 표는 id 가 그대로다.
+    # (자동 채우기가 꺼져 원고 표를 새로 지은 산출물은 평소대로 잰다)
+    ids = set(re.findall(r'<hp:tbl id="(\d+)"', "".join(kids)))
+    tops = [p for p in section if p.tag == "{%s}p" % NS['hp']][:n]
+    tops = [p for p in tops
+            if any(t.get("id") in ids for t in p.iter("{%s}tbl" % NS['hp']))]
+    if not tops:
+        return set(), set()
     native = set(re.findall(r'charPrIDRef="(\d+)"', "".join(kids)))
     return set(tops), native - draft
 
