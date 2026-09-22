@@ -376,6 +376,18 @@ def insert_object_gaps(path: str) -> int:
             b.remove(ls)
         return b
 
+    # ★ 양식 첫머리(제목 상자·표지·개요표)에는 빈 줄을 넣지 않는다 (2026-09-22 실측).
+    #   문서 맨 앞에 붙어 있는 표 문단들이 양식 첫머리다. 그 뒤에 빈 줄이 한 줄
+    #   들어가자 요약표가 1쪽에 못 들어가 **1쪽이 제목만 남고 통째로 버려졌다**
+    #   (10쪽 중 1쪽이 빈 쪽 — 쪽수 게이트는 「10쪽」이라 통과시켰다).
+    #   첫머리 뒤에는 어차피 제목 문단이 와서 제 여백을 갖는다.
+    tops = [x for x in root if x.tag == HP + "p"]
+    front = set()
+    for e in tops:
+        if e.find("." + "//" + HP + "tbl") is None:
+            break
+        front.add(id(e))
+
     added = 0
     for para in list(root.iter(HP + "p")):
         if any(a.tag.endswith("}tbl") for a in para.iterancestors()):
@@ -383,6 +395,8 @@ def insert_object_gaps(path: str) -> int:
         has_obj = (para.find("." + "//" + HP + "pic") is not None
                    or para.find("." + "//" + HP + "tbl") is not None)
         if not has_obj:
+            continue
+        if id(para) in front:
             continue
         if not is_blank(para.getprevious()):
             para.addprevious(make_blank(para))
@@ -401,13 +415,102 @@ def insert_object_gaps(path: str) -> int:
     return added
 
 
-def unset_table_treat_as_char(path: str) -> int:
-    """표의 **「글자처럼 취급」을 해제**한다 (hp:pos/@treatAsChar = 0).
+def keep_caption_with_table(path: str) -> int:
+    """표 캡션(과 그 뒤 빈 줄)을 **다음 문단과 함께** 두어 표에서 갈리지 않게 한다.
 
-    ★ 2026-09-10 사용자 지시. 실측하니 kordoc 산출물도 양식 원본도 `1` 이었다.
-      글자처럼 취급하면 표가 문단 흐름에 얹혀 앞뒤 줄바꿈·여백이 글자 기준으로
-      계산된다. 표를 독립 개체로 두는 편이 쪽 넘김과 여백이 예측 가능하다.
+    ★ 2026-09-22 실렌더로 잡았다. 쪽마다 아래 여백이 없어 표는 이미 셀 단위로 나뉘고
+      있었는데, **캡션만 앞 쪽에 남고 표가 다음 쪽에서 시작**했다
+      (4쪽 끝 「[표 1] 개발내용 축별 최종 목표」 · 5쪽 첫 줄이 그 표의 머리글).
+      사용자에게는 이것이 「표가 넘어간다」로 보인다.
 
+    한글의 「다음 문단과 함께」(paraPr/breakSetting/@keepWithNext)를 캡션에 건다.
+    캡션과 표 사이에는 `insert_object_gaps` 가 넣은 빈 줄이 있으므로 그 빈 줄에도 건다.
+    기존 문단모양은 건드리지 않고 **keepWithNext 만 다른 복제본을 뒤 번호로 덧붙인다.**
+    """
+    import re as _re
+    from lxml import etree
+    HP = "{http://www.hancom.co.kr/hwpml/2011/paragraph}"
+
+    with zipfile.ZipFile(path) as z:
+        data = {n: z.read(n) for n in z.namelist()}
+        infos = {i.filename: i for i in z.infolist()}
+    hdr = data["Contents/header.xml"].decode("utf-8")
+    root = etree.fromstring(data["Contents/section0.xml"])
+
+    tops = [p for p in root if p.tag == HP + "p"]
+    targets = []
+    for i, p in enumerate(tops):
+        if p.find(f".//{HP}tbl") is None:
+            continue
+        j = i - 1
+        while j >= 0:                      # 표 앞의 빈 줄과 캡션을 함께 잡는다
+            txt = "".join(tops[j].itertext()).strip()
+            if txt == "" or txt.startswith("[표"):
+                targets.append(tops[j])
+                if txt.startswith("[표"):
+                    break
+                j -= 1
+            else:
+                break
+    if not targets:
+        return 0
+
+    ids = [int(x) for x in _re.findall(r'<hh:paraPr id="(\d+)"', hdr)]
+    nxt = max(ids) + 1
+    clones, mapping = [], {}
+    for p in targets:
+        src = p.get("paraPrIDRef")
+        if src in mapping:
+            continue
+        m = _re.search(rf'<hh:paraPr id="{src}".*?</hh:paraPr>', hdr, _re.S)
+        if not m:
+            continue
+        xml = _re.sub(r'^<hh:paraPr id="\d+"', f'<hh:paraPr id="{nxt}"', m.group(0))
+        xml, k = _re.subn(r'(<hh:breakSetting[^>]*?)keepWithNext="0"', lambda mm: mm.group(1) + 'keepWithNext="1"', xml)
+        if not k:
+            continue
+        clones.append(xml)
+        mapping[src] = str(nxt)
+        nxt += 1
+    if not clones:
+        return 0
+    m = _re.search(r'<hh:paraProperties\s+itemCnt="(\d+)"\s*>', hdr)
+    close = hdr.find("</hh:paraProperties>", m.end())
+    hdr = (hdr[:m.start()] + f'<hh:paraProperties itemCnt="{int(m.group(1)) + len(clones)}">'
+           + hdr[m.end():close] + "".join(clones) + hdr[close:])
+    n = 0
+    for p in targets:
+        if p.get("paraPrIDRef") in mapping:
+            p.set("paraPrIDRef", mapping[p.get("paraPrIDRef")])
+            n += 1
+
+    data["Contents/header.xml"] = hdr.encode("utf-8")
+    data["Contents/section0.xml"] = etree.tostring(root, encoding="UTF-8",
+                                                   xml_declaration=True, standalone=True)
+    with zipfile.ZipFile(path, "w") as zo:
+        for name in data:
+            it = infos[name]
+            zi = zipfile.ZipInfo(name, date_time=it.date_time)
+            zi.compress_type = it.compress_type
+            zi.external_attr = it.external_attr
+            zo.writestr(zi, data[name])
+    return n
+
+
+def unset_table_treat_as_char(path: str, value: str = "0") -> int:
+    """표의 「글자처럼 취급」을 **value 로 맞춘다** (hp:pos/@treatAsChar).
+
+    ★ 2026-09-10 사용자 지시로 기본값은 **해제(0)** 다. kordoc 산출물도 양식 원본도
+      `1` 이었다. 표를 독립 개체로 두면 앞뒤 여백이 예측 가능하다.
+
+    ★★ 그런데 해제하면 **표가 쪽 경계에서 나뉘지 못한다**(2026-09-22 실측).
+      개체가 된 표는 남은 공간에 안 들어가면 통째로 다음 쪽으로 밀려 앞쪽에 빈 자리가 남는다.
+      같은 파일로 재 보니 `treatAsChar=0` 10쪽 · `=1` 11쪽이었다 — 0 쪽이 짧은 것은
+      표가 나뉘지 않아 배치가 바뀐 결과이지 내용이 준 것이 아니다.
+      표를 쪽 경계에서 나누려면 `1` 이어야 하고, 그때 `hp:tbl/@pageBreak="CELL"`
+      (쪽 경계에서 셀 단위로 나눔)과 `repeatHeader="1"` 이 함께 작동한다.
+
+    양식 명세 `style.table_treat_as_char: true` 로 켠다. 적지 않으면 예전대로 해제한다.
     그림은 건드리지 않는다 — 지시가 표에 한정됐다.
     """
     from lxml import etree
@@ -422,8 +525,8 @@ def unset_table_treat_as_char(path: str) -> int:
     n = 0
     for tbl in root.iter(HP + "tbl"):
         pos = tbl.find(HP + "pos")
-        if pos is not None and pos.get("treatAsChar") != "0":
-            pos.set("treatAsChar", "0")
+        if pos is not None and pos.get("treatAsChar") != value:
+            pos.set("treatAsChar", value)
             n += 1
 
     data["Contents/section0.xml"] = etree.tostring(
@@ -556,8 +659,19 @@ def main() -> int:
 
     og = insert_object_gaps(final)
     print(f"   그림·표 앞뒤 빈 줄 {og}개 삽입")
-    tac = unset_table_treat_as_char(final)
-    print(f"   표 글자처럼취급 해제 {tac}개")
+    # 표 「글자처럼 취급」 — 명세가 켜라고 하면 켠다(표가 쪽 경계에서 나뉘게 된다)
+    import json as _json
+    spec_path = os.path.join(d, "50_form_spec.json")
+    want_char = "0"
+    if os.path.exists(spec_path):
+        with open(spec_path, encoding="utf-8") as f:
+            want_char = "1" if (_json.load(f).get("style") or {}).get(
+                "table_treat_as_char") else "0"
+    kwn = keep_caption_with_table(final)
+    print(f"   캡션을 표에 붙임(다음 문단과 함께) {kwn}개")
+    tac = unset_table_treat_as_char(final, want_char)
+    print(f"   표 글자처럼취급 {'적용' if want_char == '1' else '해제'} {tac}개"
+          + ("  (쪽 경계에서 셀 단위로 나뉜다)" if want_char == "1" else ""))
 
     freeze_zip_times(final)          # 재현성: 컨테이너 시각 고정
 
