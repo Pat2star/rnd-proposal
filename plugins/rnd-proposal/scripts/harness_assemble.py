@@ -415,6 +415,90 @@ def insert_object_gaps(path: str) -> int:
     return added
 
 
+def normalize_font_size(path: str, pt: float) -> tuple[int, dict]:
+    """문서의 **모든** 글자를 한 크기로 맞춘다 — 제목도 표도 (2026-09-23 사용자 지시).
+
+    「모든 글자의 폰트를 11pt 로 하도록 규칙을 전면 수정해」.
+
+    양식 원본은 장 제목 16pt · 절 제목 11pt · 표 9pt · 표지 16.13pt 로 갈린다.
+    요강이 「돋움 11pt」 하나만 적었으므로 그 값으로 전부 모은다.
+
+    ★ 표는 좁아진 칸에 글자가 안 들어갈 수 있다. 실측(구조 축 채점):
+      간트표 월 칸 폭 10.1mm 인데 11pt 돋움 두 자 + 셀 여백은 11.4mm 다.
+      한글은 칸을 넘치면 **줄을 바꾸거나 칸을 늘린다** — 표가 높아지고 쪽수가 는다.
+      그래서 이 함수는 **쪽수 검사보다 먼저** 돌고, 넘치면 조립이 멈춘다.
+
+    원칙 1 을 지킨다 — 기존 글자모양은 두고 **크기만 바꾼 복제본을 뒤 번호로**
+    덧붙여 run 이 그쪽을 가리키게 한다.
+    """
+    import re as _re
+
+    with zipfile.ZipFile(path) as z:
+        names = z.namelist()
+        data = {n: z.read(n) for n in names}
+        infos = {i.filename: i for i in z.infolist()}
+
+    hdr = data["Contents/header.xml"].decode("utf-8")
+    sec = data["Contents/section0.xml"].decode("utf-8")
+    want = int(round(pt * 100))
+
+    items, size = {}, {}
+    for m in _re.finditer(r'(?s)<hh:charPr id="(\d+)".*?</hh:charPr>', hdr):
+        items[m.group(1)] = m.group(0)
+        h = _re.search(r'height="(\d+)"', m.group(0))
+        if h:
+            size[m.group(1)] = int(h.group(1))
+
+    used = set(_re.findall(r'charPrIDRef="(\d+)"', sec))
+    before = {}
+    for i in used:
+        if i in size:
+            k = f"{size[i] / 100:g}pt"
+            before[k] = before.get(k, 0) + 1
+
+    need = [i for i in used if i in size and size[i] != want]
+    if not need:
+        return 0, before
+
+    nxt = max(map(int, items)) + 1
+    mapping, clones = {}, []
+    for oid in sorted(need, key=int):
+        clone = _re.sub(r'^<hh:charPr id="\d+"', f'<hh:charPr id="{nxt}"',
+                        items[oid])
+        clone = _re.sub(r'height="\d+"', f'height="{want}"', clone)
+        clones.append(clone)
+        mapping[oid] = str(nxt)
+        nxt += 1
+
+    hdr = hdr.replace("</hh:charProperties>",
+                      "".join(clones) + "</hh:charProperties>", 1)
+    cm = _re.search(r'<hh:charProperties itemCnt="(\d+)"', hdr)
+    if cm:
+        hdr = hdr.replace(cm.group(0),
+                          f'<hh:charProperties itemCnt="{int(cm.group(1)) + len(clones)}"', 1)
+
+    moved = 0
+
+    def _swap(m):
+        nonlocal moved
+        old = m.group(1)
+        if old in mapping:
+            moved += 1
+            return f'charPrIDRef="{mapping[old]}"'
+        return m.group(0)
+
+    sec = _re.sub(r'charPrIDRef="(\d+)"', _swap, sec)
+
+    data["Contents/header.xml"] = hdr.encode("utf-8")
+    data["Contents/section0.xml"] = sec.encode("utf-8")
+    with zipfile.ZipFile(path, "w") as o:
+        for n in names:
+            o.writestr(infos[n], data[n],
+                       zipfile.ZIP_STORED if n == "mimetype"
+                       else zipfile.ZIP_DEFLATED)
+    return moved, before
+
+
 def normalize_line_spacing(path: str, pct: int,
                            include_tables: bool = False) -> tuple[int, dict]:
     """줄간격을 통일한다. **표 안은 기본으로 제외한다**(2026-09-23 사용자 결정).
@@ -895,6 +979,15 @@ def main() -> int:
     print(f"   제목을 본문에 붙임(고아 제목 방지) {khb}개")
     kwn = keep_caption_with_table(final)
     print(f"   캡션을 표에 붙임(다음 문단과 함께) {kwn}개")
+    # ★ 글자 크기를 문서 전체에 맞춘다 — 제목도 표도 (2026-09-23 사용자 지시)
+    with open(spec_path, encoding="utf-8") as f:
+        _st = _json.load(f).get("style") or {}
+    if _st.get("uniform_font_pt"):
+        _pt = float(_st["uniform_font_pt"])
+        fmoved, fbefore = normalize_font_size(final, _pt)
+        fmix = " · ".join(f"{k} {v}run" for k, v in sorted(fbefore.items()))
+        print(f"   글자 크기 {_pt:g}pt 로 통일 — {fmoved}run 옮김  (전: {fmix})")
+
     # ★ 줄간격을 문서 전체에 맞춘다 — 표 안까지 (2026-09-22 심사 결함)
     with open(spec_path, encoding="utf-8") as f:
         _ls = (_json.load(f).get("style") or {}).get("line_spacing")
