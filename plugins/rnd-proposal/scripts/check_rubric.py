@@ -37,6 +37,7 @@
     R3 실행 조건 명시     심사가 이름을 댄 조건이 본문에 있는가    실패
     R4 중복 서술          같은 말이 여러 절에 반복되는가           경고
     R5 과압축             조사·서술어가 빠져 뜻이 모호한가         경고
+    R6 요약문 칸          양식이 수치를 요구한 칸을 채웠는가        실패
 
 사용:
     python $CLAUDE_PLUGIN_ROOT/scripts/check_rubric.py --md <build.md> [--hwpx <out.hwpx>]
@@ -111,6 +112,65 @@ def _paragraph_spacing(path: str) -> tuple[Counter, Counter]:
         else:
             body[k] += 1
     return body, tbl
+
+
+# ── R6 요약문 칸 ───────────────────────────────────────────────────────────
+#   양식이 「착수시점(n단계) → 종료시점 목표(n단계)」처럼 **수치를 요구한 칸**을
+#   말로만 채우면 심사자에게는 빈칸으로 보인다.
+#   실측(2026-09-22): TRL 칸에 「1차년도 사업계획서에서 판정기준과 함께 확정」만
+#   있었다. 게이트는 전항 통과였다 — 아무도 그 칸을 보지 않았다.
+#   ★ **자리표시의 모양과 개수**까지 맞춘다.
+#     처음엔 「값에 숫자가 있는가」로만 봤는데, TRL 칸의 「1차년도 사업계획서에서
+#     …확정. 종료 판정은 200 g/day…」가 통과했다 — 숫자는 있지만 **단계 숫자가
+#     아니었다.** 자리표시가 요구하는 모양을, 요구한 횟수만큼 본다.
+PLACEHOLDERS = [
+    (re.compile(r"[nN]\s*단계"), re.compile(r"\d+\s*단계"), "단계 숫자"),
+    (re.compile(r"[nN]\s*차년도"), re.compile(r"\d+\s*차년도"), "차년도"),
+    (re.compile(r"[nN]\s*년"), re.compile(r"\d+\s*년"), "연 수"),
+    (re.compile(r"[nN]\s*개월"), re.compile(r"\d+\s*개월"), "개월 수"),
+    (re.compile(r"YYYY"), re.compile(r"\d{4}"), "연도"),
+    (re.compile(r"%"), re.compile(r"\d+(\.\d+)?\s*%"), "비중"),
+]
+
+
+def _summary_cells(md: str) -> dict:
+    """0장 요약문 표의 `| 라벨 | 값 |` 를 읽는다."""
+    out = {}
+    for ln in md.splitlines():
+        if not ln.startswith("|") or "---" in ln:
+            continue
+        c = [x.strip() for x in ln.strip("|").split("|")]
+        if len(c) >= 2 and c[0]:
+            out.setdefault(c[0], c[1])
+    return out
+
+
+def _check_summary(md: str, spec: dict) -> list[str]:
+    guide = ((spec.get("outline") or [{}])[0] or {}).get("guide") or []
+    if not guide:
+        return []
+    cells = _summary_cells(md)
+    def norm(x):
+        # 「핵심어 (국문/영문)」 ↔ 「핵심어」 처럼 괄호 안내가 붙고 안 붙고가 갈린다.
+        return re.sub(r"\s+", "", re.sub(r"\([^)]*\)", "", x))
+    bad = []
+    for g in guide:
+        label, _, want = g.partition(":")
+        need = [(v, n, cnt) for ph, v, n in PLACEHOLDERS
+                if (cnt := len(ph.findall(want)))]
+        if not want or not need:
+            continue                       # 자리표시가 없는 칸은 넘어간다
+        key = next((k for k in cells if norm(k) == norm(label)), None)
+        if key is None:
+            bad.append(f"{label.strip()}: 칸이 없다")
+            continue
+        val = cells[key]
+        for pat, name, cnt in need:
+            got = len(pat.findall(val))
+            if got < cnt:
+                bad.append(f"{label.strip()}: {name} {cnt}개를 요구하는데 {got}개다")
+    return bad
+
 
 
 def _sections(md: str) -> dict[str, list[str]]:
@@ -195,6 +255,13 @@ def check(md_path, hwpx_path=None, spec_path=None):
         fails.append(("R3 실행 조건 명시", f"본문에 없다 — {', '.join(missing)}"))
     else:
         print(f"[OK ] R3 실행 조건 명시     {len(conds)}항목 전부 있음")
+
+    # ── R6 요약문 칸 (양식이 수치를 요구한 칸) ──────────────────────────────
+    bad = _check_summary(md, spec)
+    if bad:
+        fails.append(("R6 요약문 칸", " / ".join(bad)))
+    elif (spec.get("outline") or [{}])[0].get("guide"):
+        print("[OK ] R6 요약문 칸          수치 요구 칸 전부 채움")
 
     # ── R4 중복 서술 ────────────────────────────────────────────────────────
     secs = _sections(md)
