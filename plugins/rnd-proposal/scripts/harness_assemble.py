@@ -415,6 +415,104 @@ def insert_object_gaps(path: str) -> int:
     return added
 
 
+def normalize_line_spacing(path: str, pct: int) -> tuple[int, dict]:
+    """문서의 **모든** 문단을 규정 줄간격으로 맞춘다 — 표 안까지.
+
+    ★ 실측 결함(2026-09-22, 심사 81점). 대회 요강이 「줄간격 160%」를 정했는데
+      산출물은 이랬다.
+
+          160%  196문단 (48.8%)   ← 표 밖 본문. 조립 도구가 맞춰 준다
+          130%  204문단 (50.7%)   ← **전부 표 안**. 양식 원본 값이 남았다
+           70%    2문단           ← 역시 표 안
+
+      심사평: 「문단의 약 절반에 130% 줄간격이 적용되고 70%도 일부 포함되어
+      160% 서식이 문서 전반에 일관되게 유지되지 않았습니다」 — 양식 일관성 9/15.
+      **한 자도 틀리지 않았다.**
+
+      우리 게이트는 표 밖 본문만 재고 통과시켰다. 사람 눈에도 안 보인다
+      (표 안이 좁은 것은 자연스러워 보인다). **문서 전체를 세야 보인다.**
+
+    원칙 1 을 지킨다 — 기존 문단모양은 건드리지 않고 **줄간격만 바꾼 복제본을
+    뒤 번호로 덧붙여** 문단이 그쪽을 가리키게 한다.
+    """
+    import re as _re
+
+    with zipfile.ZipFile(path) as z:
+        names = z.namelist()
+        data = {n: z.read(n) for n in names}
+        infos = {i.filename: i for i in z.infolist()}
+
+    hdr = data["Contents/header.xml"].decode("utf-8")
+    sec = data["Contents/section0.xml"].decode("utf-8")
+
+    cur = {}
+    for m in _re.finditer(r'<hh:paraPr id="(\d+)"(.*?)</hh:paraPr>', hdr, _re.S):
+        ls = _re.search(r'<hh:lineSpacing[^>]*type="([^"]*)"[^>]*value="(-?\d+)"',
+                        m.group(2))
+        if ls:
+            cur[m.group(1)] = (ls.group(1), int(ls.group(2)))
+
+    used = set(_re.findall(r'<hp:p\b[^>]*paraPrIDRef="(\d+)"', sec))
+    # 규정과 다른 것만 복제한다. PERCENT 가 아닌 것(고정값 등)은 건드리지 않는다 —
+    # 양식이 일부러 정한 것일 수 있고, 복제기가 PERCENT 만 다룬다.
+    need = {i: pct for i in used
+            if i in cur and cur[i][0] == "PERCENT" and cur[i][1] != pct}
+    before = {f"{cur[i][0]} {cur[i][1]}": 0 for i in used if i in cur}
+    for i in used:
+        if i in cur:
+            before[f"{cur[i][0]} {cur[i][1]}"] += 1
+    if not need:
+        return 0, before
+
+    # 복제본을 **뒤 번호로** 덧붙인다 (원칙 1 — 기존 항목은 손대지 않는다).
+    #   engine 을 부르지 않는다: 이 파일은 플러그인으로도 나가 단독 실행된다.
+    items = dict(_re.findall(r'(?s)<hh:paraPr id="(\d+)".*?</hh:paraPr>', hdr)
+                 ) if False else {}
+    for m in _re.finditer(r'(?s)<hh:paraPr id="(\d+)".*?</hh:paraPr>', hdr):
+        items[m.group(1)] = m.group(0)
+    nxt = max(map(int, items)) + 1
+    mapping, clones = {}, []
+    for oid in need:
+        xml = items[oid]
+        clone = _re.sub(r'^<hh:paraPr id="\d+"', f'<hh:paraPr id="{nxt}"', xml)
+        clone, n = _re.subn(r'(<hh:lineSpacing type="PERCENT" value=")\d+(")',
+                            rf"\g<1>{int(pct)}\g<2>", clone)
+        if not n:
+            continue
+        clones.append(clone)
+        mapping[oid] = str(nxt)
+        nxt += 1
+    if not mapping:
+        return 0, before
+    hdr = hdr.replace("</hh:paraProperties>", "".join(clones) + "</hh:paraProperties>", 1)
+    cntm = _re.search(r'<hh:paraProperties itemCnt="(\d+)"', hdr)
+    if cntm:
+        hdr = hdr.replace(cntm.group(0),
+                          f'<hh:paraProperties itemCnt="{int(cntm.group(1)) + len(clones)}"', 1)
+    new_hdr = hdr.encode("utf-8")
+    moved = 0
+
+    def _swap(m):
+        nonlocal moved
+        old = m.group(1)
+        if old in mapping:
+            moved += 1
+            return m.group(0).replace(f'paraPrIDRef="{old}"',
+                                      f'paraPrIDRef="{mapping[old]}"')
+        return m.group(0)
+
+    sec = _re.sub(r'<hp:p\b[^>]*paraPrIDRef="(\d+)"', _swap, sec)
+
+    data["Contents/header.xml"] = new_hdr
+    data["Contents/section0.xml"] = sec.encode("utf-8")
+    with zipfile.ZipFile(path, "w") as o:
+        for n in names:
+            o.writestr(infos[n], data[n],
+                       zipfile.ZIP_STORED if n == "mimetype"
+                       else zipfile.ZIP_DEFLATED)
+    return moved, before
+
+
 def keep_caption_with_table(path: str) -> int:
     """표 캡션(과 그 뒤 빈 줄)을 **다음 문단과 함께** 두어 표에서 갈리지 않게 한다.
 
@@ -669,13 +767,31 @@ def main() -> int:
                 "table_treat_as_char") else "0"
     kwn = keep_caption_with_table(final)
     print(f"   캡션을 표에 붙임(다음 문단과 함께) {kwn}개")
+    # ★ 줄간격을 문서 전체에 맞춘다 — 표 안까지 (2026-09-22 심사 결함)
+    with open(spec_path, encoding="utf-8") as f:
+        _ls = (_json.load(f).get("style") or {}).get("line_spacing")
+    if _ls:
+        moved, before = normalize_line_spacing(final, int(_ls))
+        mix = " · ".join(f"{k} {v}문단" for k, v in sorted(before.items()))
+        print(f"   줄간격 {_ls}% 로 통일 — {moved}문단 옮김  (전: {mix})")
+
     tac = unset_table_treat_as_char(final, want_char)
     print(f"   표 글자처럼취급 {'적용' if want_char == '1' else '해제'} {tac}개"
           + ("  (쪽 경계에서 셀 단위로 나뉜다)" if want_char == "1" else ""))
 
     freeze_zip_times(final)          # 재현성: 컨테이너 시각 고정
 
-    print(f"[6/6] 쪽수 하드캡 검사 (상한 {max_pages}쪽)")
+    # ★ 심사 배점 검사 — 81점을 맞고 넣었다 (2026-09-23).
+    #   줄간격·논리 충돌·실행 조건·중복·과압축. 배점 손실이 큰 순서다.
+    print("[6/7] 심사 배점 검사 (rubric)")
+    import check_rubric
+    rub_fail, rub_warn = check_rubric.check(build, final, spec_path)
+    if rub_fail:
+        print("   ✖ 심사 배점 항목 위반 — 작성자에게 되돌린다")
+        return 2
+    print(f"   ✔ 실패 0건 · 경고 {len(rub_warn)}건")
+
+    print(f"[7/7] 쪽수 하드캡 검사 (상한 {max_pages}쪽)")
     pages = page_count(final, max_pages)
     if pages is None:
         print("   ⚠ 한컴을 실행하지 못해 **미측정**. 제출 전 반드시 수동 확인할 것")
