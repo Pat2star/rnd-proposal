@@ -664,10 +664,15 @@ def main():
         #   실측: 슬롯 64개 평균 155자 · 최대 167 — 한 줄이 40자이니 평균 네 줄이다.
         #   사용자 요건은 「한 bullet 당 한 줄, 길어야 두 줄」이다.
         #   짧게 쓰라는 게 아니라 **사실 하나에 슬롯 하나**를 쓰라는 뜻이다.
-        smax = int(ws.get("slot_max_chars", 115))
+        # [PATCH 2026-09-23] 상한을 **끌 수 있게** 한다 (사용자 결정).
+        #   길이 자체가 문제가 아니라 중복·모호함이 문제라는 판단이라,
+        #   명세가 null 을 주면 이 항목을 건너뛴다. 길이는 F-8c 가 계속 본다.
+        _sm = ws.get("slot_max_chars", 115)
+        smax = None if _sm is None else int(_sm)
         slots = [t for t in st["bullets"] if t.startswith(("○", "-", "·"))]
-        over = [t[:40] + "…" for t in slots if len(t) > smax]
-        check(f"F-8d 슬롯 길이(≤{smax}자)", not over,
+        over = [] if smax is None else [t[:40] + "…" for t in slots if len(t) > smax]
+        check("F-8d 슬롯 길이(상한 해제)" if smax is None
+              else f"F-8d 슬롯 길이(≤{smax}자)", not over,
               (f"초과 {len(over)}/{len(slots)}건 {over[:2]}" if over
                else f"슬롯 {len(slots)}건 전량 준수"),
               "hwpx")

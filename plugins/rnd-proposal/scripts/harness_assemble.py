@@ -545,6 +545,100 @@ def normalize_line_spacing(path: str, pct: int,
     return moved, before
 
 
+def keep_heading_with_body(path: str) -> int:
+    """장·절 제목이 쪽 끝에 홀로 남지 않게 한다 (2026-09-23 심사 지적).
+
+    실측: 3쪽이 「2. 연구 목표」와 「2-1. 최종 목표」 두 제목만 남고 152pt 가 비었다.
+    제목 문단의 `breakSetting/@keepWithNext` 가 0 이라 본문이 다음 쪽으로 넘어가도
+    제목은 앞 쪽에 남는다. **고아 제목**이라 부르고, 구조 점수에서 깎인다.
+
+    캡션에 쓴 수법과 같다 — 기존 문단모양을 두고 `keepWithNext="1"` 복제본을
+    뒤 번호로 덧붙여 제목 문단이 그쪽을 가리키게 한다(원칙 1).
+
+    제목 판별은 글자 크기로 한다 — 본문보다 큰 charPr 을 쓰거나 굵은 문단이
+    제목이다. 양식마다 스타일 id 가 다르므로 번호를 박지 않는다.
+    """
+    import re as _re
+
+    with zipfile.ZipFile(path) as z:
+        names = z.namelist()
+        data = {n: z.read(n) for n in names}
+        infos = {i.filename: i for i in z.infolist()}
+
+    hdr = data["Contents/header.xml"].decode("utf-8")
+    sec = data["Contents/section0.xml"].decode("utf-8")
+
+    size = {}
+    for m in _re.finditer(r'<hh:charPr id="(\d+)"(.*?)</hh:charPr>', hdr, _re.S):
+        h = _re.search(r'height="(\d+)"', m.group(2))
+        if h:
+            size[m.group(1)] = int(h.group(1)) / 100
+
+    # 표 밖 문단만 본다. 「N.」 또는 「N-N.」 로 시작하는 문단이 장·절 제목이다.
+    spans = [(m.start(), m.end())
+             for m in _re.finditer(r"<hp:tbl\b.*?</hp:tbl>", sec, _re.S)]
+    heads = set()
+    for m in _re.finditer(r'(?s)<hp:p\b[^>]*paraPrIDRef="(\d+)".*?</hp:p>', sec):
+        if any(a <= m.start() < b for a, b in spans):
+            continue
+        txt = "".join(_re.findall(r"<hp:t>(.*?)</hp:t>", m.group(0), _re.S))
+        txt = _re.sub(r"<[^>]+>", "", txt).strip()
+        # ★ **절 제목(N-N.)만** 묶는다 (2026-09-23 실측).
+        #   장 제목(N.)까지 묶었더니 장이 통째로 다음 쪽으로 밀려 앞 쪽에
+        #   208pt 가 비었고 문서가 11쪽이 됐다. 장 제목이 쪽머리에 오는 것은
+        #   어색하지 않다 — 어색한 것은 **절 제목만 남고 본문이 넘어가는** 경우다.
+        if _re.match(r"^\d+-\d+\.\s+\S", txt) and len(txt) <= 60:
+            heads.add(m.group(1))
+    if not heads:
+        return 0
+
+    items = {}
+    for m in _re.finditer(r'(?s)<hh:paraPr id="(\d+)".*?</hh:paraPr>', hdr):
+        items[m.group(1)] = m.group(0)
+    nxt = max(map(int, items)) + 1
+    mapping, clones = {}, []
+    for oid in sorted(heads, key=int):
+        xml = items.get(oid)
+        if xml is None or 'keepWithNext="0"' not in xml:
+            continue
+        clone = _re.sub(r'^<hh:paraPr id="\d+"', f'<hh:paraPr id="{nxt}"', xml)
+        clone = clone.replace('keepWithNext="0"', 'keepWithNext="1"', 1)
+        clones.append(clone)
+        mapping[oid] = str(nxt)
+        nxt += 1
+    if not mapping:
+        return 0
+
+    hdr = hdr.replace("</hh:paraProperties>",
+                      "".join(clones) + "</hh:paraProperties>", 1)
+    cm = _re.search(r'<hh:paraProperties itemCnt="(\d+)"', hdr)
+    if cm:
+        hdr = hdr.replace(cm.group(0),
+                          f'<hh:paraProperties itemCnt="{int(cm.group(1)) + len(clones)}"', 1)
+
+    moved = 0
+
+    def _swap(m):
+        nonlocal moved
+        old = m.group(1)
+        if old in mapping and not any(a <= m.start() < b for a, b in spans):
+            moved += 1
+            return m.group(0).replace(f'paraPrIDRef="{old}"',
+                                      f'paraPrIDRef="{mapping[old]}"')
+        return m.group(0)
+
+    sec = _re.sub(r'<hp:p\b[^>]*paraPrIDRef="(\d+)"', _swap, sec)
+
+    data["Contents/header.xml"] = hdr.encode("utf-8")
+    data["Contents/section0.xml"] = sec.encode("utf-8")
+    with zipfile.ZipFile(path, "w") as o:
+        for n in names:
+            o.writestr(infos[n], data[n],
+                       zipfile.ZIP_STORED if n == "mimetype"
+                       else zipfile.ZIP_DEFLATED)
+    return moved
+
+
 def keep_caption_with_table(path: str) -> int:
     """표 캡션(과 그 뒤 빈 줄)을 **다음 문단과 함께** 두어 표에서 갈리지 않게 한다.
 
@@ -797,6 +891,8 @@ def main() -> int:
         with open(spec_path, encoding="utf-8") as f:
             want_char = "1" if (_json.load(f).get("style") or {}).get(
                 "table_treat_as_char") else "0"
+    khb = keep_heading_with_body(final)
+    print(f"   제목을 본문에 붙임(고아 제목 방지) {khb}개")
     kwn = keep_caption_with_table(final)
     print(f"   캡션을 표에 붙임(다음 문단과 함께) {kwn}개")
     # ★ 줄간격을 문서 전체에 맞춘다 — 표 안까지 (2026-09-22 심사 결함)
