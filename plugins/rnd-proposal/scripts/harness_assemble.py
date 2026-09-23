@@ -415,8 +415,17 @@ def insert_object_gaps(path: str) -> int:
     return added
 
 
-def normalize_line_spacing(path: str, pct: int) -> tuple[int, dict]:
-    """문서의 **모든** 문단을 규정 줄간격으로 맞춘다 — 표 안까지.
+def normalize_line_spacing(path: str, pct: int,
+                           include_tables: bool = False) -> tuple[int, dict]:
+    """줄간격을 통일한다. **표 안은 기본으로 제외한다**(2026-09-23 사용자 결정).
+
+    본문(표 밖)은 규정값으로 맞추고, 표 안은 **원래 값을 유지하되 하나로 모은다.**
+    표가 160% 가 되면 성기게 보인다는 판단이라, 규정값 적용은 본문까지만 한다.
+
+    다만 표 안에 **섞인 값**은 남기지 않는다 — 심사가 「70% 줄간격도 일부
+    포함되어」라고 집어낸 것이 그 잡값 2문단이었다. 표 안은 가장 많이 쓰인
+    값 하나로 모은다. 규정을 표까지 걸고 싶으면 명세에
+    `style.line_spacing_include_tables: true` 를 적는다.
 
     ★ 실측 결함(2026-09-22, 심사 81점). 대회 요강이 「줄간격 160%」를 정했는데
       산출물은 이랬다.
@@ -452,15 +461,38 @@ def normalize_line_spacing(path: str, pct: int) -> tuple[int, dict]:
         if ls:
             cur[m.group(1)] = (ls.group(1), int(ls.group(2)))
 
-    used = set(_re.findall(r'<hp:p\b[^>]*paraPrIDRef="(\d+)"', sec))
-    # 규정과 다른 것만 복제한다. PERCENT 가 아닌 것(고정값 등)은 건드리지 않는다 —
-    # 양식이 일부러 정한 것일 수 있고, 복제기가 PERCENT 만 다룬다.
-    need = {i: pct for i in used
-            if i in cur and cur[i][0] == "PERCENT" and cur[i][1] != pct}
-    before = {f"{cur[i][0]} {cur[i][1]}": 0 for i in used if i in cur}
-    for i in used:
+    spans = [(m.start(), m.end())
+             for m in _re.finditer(r"<hp:tbl\b.*?</hp:tbl>", sec, _re.S)]
+
+    def _in_tbl(pos):
+        return any(a <= pos < b for a, b in spans)
+
+    body, tbl, before = set(), set(), {}
+    for m in _re.finditer(r'<hp:p\b[^>]*paraPrIDRef="(\d+)"', sec):
+        i = m.group(1)
+        (tbl if _in_tbl(m.start()) else body).add(i)
         if i in cur:
-            before[f"{cur[i][0]} {cur[i][1]}"] += 1
+            k = f"{cur[i][0]} {cur[i][1]}"
+            before[k] = before.get(k, 0) + 1
+
+    # PERCENT 가 아닌 것(고정값 등)은 건드리지 않는다 — 양식이 일부러 정한 값일
+    # 수 있고, 복제기가 PERCENT 만 다룬다.
+    def pc(i):
+        return i in cur and cur[i][0] == "PERCENT"
+
+    need = {i: pct for i in body if pc(i) and cur[i][1] != pct}
+    if include_tables:
+        need.update({i: pct for i in tbl if pc(i) and cur[i][1] != pct})
+    elif tbl:
+        w = {}
+        for m in _re.finditer(r'<hp:p\b[^>]*paraPrIDRef="(\d+)"', sec):
+            i = m.group(1)
+            if _in_tbl(m.start()) and pc(i):
+                w[cur[i][1]] = w.get(cur[i][1], 0) + 1
+        if w:
+            main = max(w, key=lambda k: w[k])
+            need.update({i: main for i in tbl if pc(i) and cur[i][1] != main})
+
     if not need:
         return 0, before
 
@@ -476,7 +508,7 @@ def normalize_line_spacing(path: str, pct: int) -> tuple[int, dict]:
         xml = items[oid]
         clone = _re.sub(r'^<hh:paraPr id="\d+"', f'<hh:paraPr id="{nxt}"', xml)
         clone, n = _re.subn(r'(<hh:lineSpacing type="PERCENT" value=")\d+(")',
-                            rf"\g<1>{int(pct)}\g<2>", clone)
+                            rf"\g<1>{int(need[oid])}\g<2>", clone)
         if not n:
             continue
         clones.append(clone)
@@ -771,9 +803,14 @@ def main() -> int:
     with open(spec_path, encoding="utf-8") as f:
         _ls = (_json.load(f).get("style") or {}).get("line_spacing")
     if _ls:
-        moved, before = normalize_line_spacing(final, int(_ls))
+        with open(spec_path, encoding="utf-8") as f:
+            _inc = bool((_json.load(f).get("style") or {}
+                         ).get("line_spacing_include_tables"))
+        moved, before = normalize_line_spacing(final, int(_ls), _inc)
         mix = " · ".join(f"{k} {v}문단" for k, v in sorted(before.items()))
-        print(f"   줄간격 {_ls}% 로 통일 — {moved}문단 옮김  (전: {mix})")
+        print(f"   줄간격 본문 {_ls}%"
+              + ("  · 표 안도 함께" if _inc else "  · 표 안은 한 값으로 통일")
+              + f" — {moved}문단 옮김  (전: {mix})")
 
     tac = unset_table_treat_as_char(final, want_char)
     print(f"   표 글자처럼취급 {'적용' if want_char == '1' else '해제'} {tac}개"

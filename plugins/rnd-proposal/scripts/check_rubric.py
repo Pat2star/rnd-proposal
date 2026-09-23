@@ -83,8 +83,14 @@ CONDITIONS = {
 }
 
 
-def _paragraph_spacing(path: str) -> Counter:
-    """HWPX 전 문단의 줄간격 — **표 안을 포함한다.** 이게 요점이다."""
+def _paragraph_spacing(path: str) -> tuple[Counter, Counter]:
+    """(본문, 표 안) 문단의 줄간격.
+
+    ★ 표 안을 따로 센다 (2026-09-23 사용자 결정). 규정값은 **본문까지만**
+      적용하고, 표 안은 원래 값을 쓰되 **하나로 모여 있어야 한다.**
+      심사가 집어낸 것은 130% 자체가 아니라 **섞여 있다는 것**이었다 —
+      「70% 줄간격도 일부 포함되어」.
+    """
     z = zipfile.ZipFile(path)
     hdr = z.read("Contents/header.xml").decode("utf-8")
     sec = "".join(z.read(n).decode("utf-8") for n in sorted(z.namelist())
@@ -95,8 +101,16 @@ def _paragraph_spacing(path: str) -> Counter:
                        m.group(2))
         if ls:
             sp[m.group(1)] = (ls.group(1), int(ls.group(2)))
-    return Counter(sp.get(i, ("?", 0))
-                   for i in re.findall(r'<hp:p\b[^>]*paraPrIDRef="(\d+)"', sec))
+    spans = [(m.start(), m.end())
+             for m in re.finditer(r"<hp:tbl\b.*?</hp:tbl>", sec, re.S)]
+    body, tbl = Counter(), Counter()
+    for m in re.finditer(r'<hp:p\b[^>]*paraPrIDRef="(\d+)"', sec):
+        k = sp.get(m.group(1), ("?", 0))
+        if any(a <= m.start() < b for a, b in spans):
+            tbl[k] += 1
+        else:
+            body[k] += 1
+    return body, tbl
 
 
 def _sections(md: str) -> dict[str, list[str]]:
@@ -142,16 +156,22 @@ def check(md_path, hwpx_path=None, spec_path=None):
     # ── R1 줄간격 단일성 (배점 손실 1위) ────────────────────────────────────
     want = (spec.get("style") or {}).get("line_spacing")
     if hwpx_path and want:
-        cnt = _paragraph_spacing(hwpx_path)
-        tot = sum(cnt.values()) or 1
-        off = {k: v for k, v in cnt.items() if k != ("PERCENT", int(want))}
-        detail = " · ".join(f"{k[0]} {k[1]}: {v}문단({v / tot * 100:.1f}%)"
-                            for k, v in sorted(off.items()))
+        body, tbl = _paragraph_spacing(hwpx_path)
+        inc = bool((spec.get("style") or {}).get("line_spacing_include_tables"))
+        scope = body + tbl if inc else body
+        off = {k: v for k, v in scope.items() if k != ("PERCENT", int(want))}
+        tot = sum(scope.values()) or 1
         if off:
+            d = " · ".join(f"{k[0]} {k[1]}: {v}문단" for k, v in sorted(off.items()))
             fails.append(("R1 줄간격 단일성",
-                          f"규정 {want}% 와 다른 문단 {sum(off.values())}/{tot} — {detail}"))
+                          f"규정 {want}% 와 다른 문단 {sum(off.values())}/{tot} — {d}"))
+        elif not inc and len(tbl) > 1:
+            d = " · ".join(f"{k[0]} {k[1]}: {v}문단" for k, v in sorted(tbl.items()))
+            fails.append(("R1 줄간격 단일성",
+                          f"표 안 줄간격이 섞였다 — {d}  (본문 {want}% 는 정상)"))
         else:
-            print(f"[OK ] R1 줄간격 단일성      전 {tot}문단 {want}% (표 안 포함)")
+            t = f" · 표 안 {list(tbl)[0][1]}%" if tbl else ""
+            print(f"[OK ] R1 줄간격 단일성      본문 {tot}문단 {want}%{t}")
     elif want:
         warns.append(("R1 줄간격 단일성", "hwpx 를 주지 않아 못 쟀다"))
 
